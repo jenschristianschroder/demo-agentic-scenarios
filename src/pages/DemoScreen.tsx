@@ -20,12 +20,12 @@ const DemoScreen: React.FC = () => {
   const navigate = useNavigate();
 
   // ─── Controls state ───────────────────────────────────────────────────────
-  const [prompt, setPrompt] = useState('');
+  const [prompt, setPrompt] = useState('Write a product overview for Contoso Electronics\' latest laptop lineup, including model names, specifications, and pricing.');
   const [creativityLevel, setCreativityLevel] = useState(0.7);
   const [workflowMode, setWorkflowMode] = useState<WorkflowMode>('review-after-first');
   const [acceptanceThreshold, setAcceptanceThreshold] = useState(0.8);
   const [maxIterations, setMaxIterations] = useState(3);
-  const [generatorKnowledgeSource, setGeneratorKnowledgeSource] = useState(true);
+  const [generatorKnowledgeSource, setGeneratorKnowledgeSource] = useState(false);
 
   // ─── Orchestration state ──────────────────────────────────────────────────
   const [isRunning, setIsRunning] = useState(false);
