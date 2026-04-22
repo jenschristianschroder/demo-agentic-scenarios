@@ -14,6 +14,9 @@ param openAIDeployment string = 'gpt-4o'
 @description('Azure region for OpenAI (must support gpt-4o GlobalStandard)')
 param openAILocation string = 'swedencentral'
 
+@description('Azure AI Search index name')
+param searchIndex string = 'knowledge-base'
+
 @description('Container image tag (typically the git SHA)')
 param imageTag string
 
@@ -25,6 +28,7 @@ var identityName = '${appName}-identity'
 var apiAppName = '${appName}-api'
 var spaAppName = '${appName}-spa'
 var openAIName = '${appName}-openai-${uniqueString(resourceGroup().id)}'
+var searchName = '${appName}-search-${uniqueString(resourceGroup().id)}'
 
 // ─── Modules ─────────────────────────────────────────────────────────────────
 
@@ -53,6 +57,15 @@ module openai 'modules/openai.bicep' = {
   }
 }
 
+module search 'modules/search.bicep' = {
+  name: 'search'
+  params: {
+    location: location
+    name: searchName
+    indexName: searchIndex
+  }
+}
+
 module identity 'modules/identity.bicep' = {
   name: 'identity'
   params: {
@@ -60,6 +73,7 @@ module identity 'modules/identity.bicep' = {
     name: identityName
     acrId: acr.outputs.id
     openAIId: openai.outputs.id
+    searchId: search.outputs.id
   }
 }
 
@@ -74,6 +88,8 @@ module apiApp 'modules/aca-api.bicep' = {
     identityClientId: identity.outputs.clientId
     openAIEndpoint: openai.outputs.endpoint
     openAIDeployment: openAIDeployment
+    searchEndpoint: search.outputs.endpoint
+    searchIndex: searchIndex
     acrLoginServer: acr.outputs.loginServer
   }
 }

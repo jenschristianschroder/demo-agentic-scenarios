@@ -4,13 +4,14 @@
 
 import type { FactCheckerOutput, FactualClaim, ClaimStatus } from '../types.js';
 import { getOpenAIClient } from '../azureClients.js';
+import { retrieveDocuments, formatAsContext } from './searchRetriever.js';
 
 const SYSTEM_PROMPT = `You are a fact-checker agent in a multi-agent content pipeline.
 
-Your job is to evaluate a list of factual claims for accuracy. For each claim, determine:
-- "supported": the claim is factually accurate based on your knowledge
-- "unsupported": the claim is factually incorrect or fabricated
-- "uncertain": you cannot confidently verify or refute the claim
+Your job is to evaluate a list of factual claims for accuracy. Use the provided knowledge base documents as your primary evidence source. For each claim, determine:
+- "supported": the claim is backed by knowledge base documents or is factually accurate
+- "unsupported": the claim contradicts the knowledge base or is factually incorrect
+- "uncertain": neither the knowledge base nor your knowledge can confirm or refute the claim
 
 Also provide:
 - A brief evidence string for each claim explaining your reasoning
@@ -30,7 +31,12 @@ export async function runFactChecker(
 ): Promise<FactCheckerOutput> {
   const client = getOpenAIClient();
 
-  const userMessage = `Draft text:\n---\n${draftText}\n---\n\nClaims to verify:\n${claims.map((c) => `- [${c.id}] ${c.text}`).join('\n')}`;
+  // Retrieve evidence from knowledge base for all claims
+  const claimQuery = claims.map(c => c.text).join(' ');
+  const knowledgeDocs = await retrieveDocuments(claimQuery);
+  const contextBlock = formatAsContext(knowledgeDocs);
+
+  const userMessage = `Draft text:\n---\n${draftText}\n---\n${contextBlock}\n\nClaims to verify:\n${claims.map((c) => `- [${c.id}] ${c.text}`).join('\n')}`;
 
   const response = await client.chat.completions.create({
     model: process.env.AZURE_OPENAI_DEPLOYMENT || 'gpt-4o',

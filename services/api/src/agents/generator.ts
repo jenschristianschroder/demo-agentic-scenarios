@@ -4,6 +4,7 @@
 
 import type { GeneratorOutput, FactualClaim } from '../types.js';
 import { getOpenAIClient } from '../azureClients.js';
+import { retrieveDocuments, formatAsContext } from './searchRetriever.js';
 
 const SYSTEM_PROMPT = `You are a content generator agent in a multi-agent fact-checking pipeline.
 
@@ -15,6 +16,8 @@ IMPORTANT RULES:
 - Assign each claim a unique id like "claim-{iteration}-{n}" where iteration is provided and n is sequential starting at 1.
 - If you are revising a previous draft, incorporate the revision instructions to fix incorrect claims.
 - Do NOT repeat claims that were flagged as unsupported — replace them with correct, verifiable facts.
+- If knowledge base documents are provided, use them as your primary source of facts.
+- Prefer information from the knowledge base over your training data when they conflict.
 
 Respond with valid JSON matching the provided schema.`;
 
@@ -29,7 +32,12 @@ export async function runGenerator(
   revisionInstructions?: string
 ): Promise<GeneratorOutput> {
   const client = getOpenAIClient();
-  const userMessage = buildUserMessage(prompt, iteration, previousDraft, revisionInstructions);
+
+  // Retrieve relevant knowledge base documents
+  const knowledgeDocs = await retrieveDocuments(prompt);
+  const contextBlock = formatAsContext(knowledgeDocs);
+
+  const userMessage = buildUserMessage(prompt, iteration, contextBlock, previousDraft, revisionInstructions);
 
   const response = await client.chat.completions.create({
     model: process.env.AZURE_OPENAI_DEPLOYMENT || 'gpt-4o',
@@ -89,10 +97,15 @@ export async function runGenerator(
 function buildUserMessage(
   prompt: string,
   iteration: number,
+  contextBlock: string,
   previousDraft?: string,
   revisionInstructions?: string
 ): string {
   let message = `Prompt: ${prompt}\nIteration: ${iteration}\n`;
+
+  if (contextBlock) {
+    message += contextBlock + '\n';
+  }
 
   if (iteration > 1 && previousDraft && revisionInstructions) {
     message += `\nYou are REVISING a previous draft. Here is the previous draft:\n---\n${previousDraft}\n---\n`;

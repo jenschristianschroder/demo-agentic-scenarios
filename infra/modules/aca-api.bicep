@@ -22,6 +22,12 @@ param openAIEndpoint string
 @description('Azure OpenAI deployment name')
 param openAIDeployment string
 
+@description('Azure AI Search endpoint URL')
+param searchEndpoint string
+
+@description('Azure AI Search index name')
+param searchIndex string
+
 @description('ACR login server')
 param acrLoginServer string
 
@@ -63,6 +69,8 @@ resource apiApp 'Microsoft.App/containerApps@2023-05-01' = {
             { name: 'AZURE_CLIENT_ID', value: identityClientId }
             { name: 'AZURE_OPENAI_ENDPOINT', value: openAIEndpoint }
             { name: 'AZURE_OPENAI_DEPLOYMENT', value: openAIDeployment }
+            { name: 'AZURE_SEARCH_ENDPOINT', value: searchEndpoint }
+            { name: 'AZURE_SEARCH_INDEX', value: searchIndex }
             { name: 'CORS_ORIGIN', value: '*' }
           ]
         }
