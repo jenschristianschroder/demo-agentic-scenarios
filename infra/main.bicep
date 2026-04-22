@@ -24,7 +24,7 @@ var envName = '${appName}-env'
 var identityName = '${appName}-identity'
 var apiAppName = '${appName}-api'
 var spaAppName = '${appName}-spa'
-var openAIName = '${appName}-openai'
+var openAIName = '${appName}-openai-${uniqueString(resourceGroup().id)}'
 var searchName = '${appName}-search-${uniqueString(resourceGroup().id)}'
 
 // ─── Modules ─────────────────────────────────────────────────────────────────
