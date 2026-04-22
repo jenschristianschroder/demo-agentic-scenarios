@@ -14,6 +14,9 @@ param openAIDeployment string = 'gpt-4o'
 @description('Azure AI Search index name')
 param searchIndex string = 'knowledge-base'
 
+@description('Azure region for OpenAI (must support gpt-4o GlobalStandard)')
+param openAILocation string = 'swedencentral'
+
 @description('Container image tag (typically the git SHA)')
 param imageTag string
 
@@ -48,7 +51,7 @@ module environment 'modules/aca-environment.bicep' = {
 module openai 'modules/openai.bicep' = {
   name: 'openai'
   params: {
-    location: location
+    location: openAILocation
     name: openAIName
     deploymentName: openAIDeployment
   }
