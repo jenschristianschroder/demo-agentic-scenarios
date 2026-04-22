@@ -205,8 +205,8 @@ const DemoScreen: React.FC = () => {
           events={events}
         />
 
-        {/* Live iteration log for auto-revise mode */}
-        {workflowMode === 'auto-revise' && iterations.length > 0 && (
+        {/* Live iteration log */}
+        {iterations.length > 0 && (
           <IterationLog iterations={iterations} isRunning={isRunning} />
         )}
 
