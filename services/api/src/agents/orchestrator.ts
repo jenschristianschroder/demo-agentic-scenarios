@@ -27,7 +27,7 @@ export async function runOrchestrator(
   request: OrchestrationRequest,
   res: Response
 ): Promise<void> {
-  const { prompt, creativityLevel, workflowMode, acceptanceThreshold, maxIterations } = request;
+  const { prompt, creativityLevel, workflowMode, acceptanceThreshold, maxIterations, generatorKnowledgeSource } = request;
   const iterations: IterationRecord[] = [];
 
   // ── Step 1: User request acknowledged ──────────────────────────────────
@@ -70,6 +70,7 @@ export async function runOrchestrator(
       prompt,
       creativityLevel,
       currentIteration,
+      generatorKnowledgeSource,
       lastGeneratorOutput?.draftText,
       lastFactCheckerOutput?.revisionInstructions
     );

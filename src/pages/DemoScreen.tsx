@@ -25,6 +25,7 @@ const DemoScreen: React.FC = () => {
   const [workflowMode, setWorkflowMode] = useState<WorkflowMode>('review-after-first');
   const [acceptanceThreshold, setAcceptanceThreshold] = useState(0.8);
   const [maxIterations, setMaxIterations] = useState(3);
+  const [generatorKnowledgeSource, setGeneratorKnowledgeSource] = useState(true);
 
   // ─── Orchestration state ──────────────────────────────────────────────────
   const [isRunning, setIsRunning] = useState(false);
@@ -53,6 +54,7 @@ const DemoScreen: React.FC = () => {
       workflowMode,
       acceptanceThreshold,
       maxIterations,
+      generatorKnowledgeSource,
     };
 
     try {
@@ -127,7 +129,7 @@ const DemoScreen: React.FC = () => {
       setIsRunning(false);
       setActiveStep(null);
     }
-  }, [prompt, creativityLevel, workflowMode, acceptanceThreshold, maxIterations, isRunning]);
+  }, [prompt, creativityLevel, workflowMode, acceptanceThreshold, maxIterations, generatorKnowledgeSource, isRunning]);
 
   // Find data for the selected step to show in the detail panel
   const getSelectedStepData = () => {
@@ -188,6 +190,8 @@ const DemoScreen: React.FC = () => {
           onAcceptanceThresholdChange={setAcceptanceThreshold}
           maxIterations={maxIterations}
           onMaxIterationsChange={setMaxIterations}
+          generatorKnowledgeSource={generatorKnowledgeSource}
+          onGeneratorKnowledgeSourceChange={setGeneratorKnowledgeSource}
           onRun={handleRun}
           isRunning={isRunning}
         />

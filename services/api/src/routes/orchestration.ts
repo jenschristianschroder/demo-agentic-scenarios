@@ -27,6 +27,7 @@ orchestrationRouter.post('/run', (req, res) => {
   const acceptanceThreshold = clamp(body.acceptanceThreshold ?? 0.8, 0, 1);
   const maxIterations = clamp(Math.round(body.maxIterations ?? 3), 1, 10);
   const workflowMode = body.workflowMode === 'auto-revise' ? 'auto-revise' : 'review-after-first';
+  const generatorKnowledgeSource = body.generatorKnowledgeSource !== false;
 
   // ── Set up SSE headers ───────────────────────────────────────────────
   res.writeHead(200, {
@@ -42,6 +43,7 @@ orchestrationRouter.post('/run', (req, res) => {
     workflowMode,
     acceptanceThreshold,
     maxIterations,
+    generatorKnowledgeSource,
   };
 
   // Run the orchestrator — it writes SSE events directly to the response

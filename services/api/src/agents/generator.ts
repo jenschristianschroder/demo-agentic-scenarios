@@ -28,13 +28,14 @@ export async function runGenerator(
   prompt: string,
   creativityLevel: number,
   iteration: number,
+  useKnowledgeSource: boolean,
   previousDraft?: string,
   revisionInstructions?: string
 ): Promise<GeneratorOutput> {
   const client = getOpenAIClient();
 
-  // Retrieve relevant knowledge base documents
-  const knowledgeDocs = await retrieveDocuments(prompt);
+  // Retrieve relevant knowledge base documents (only if enabled)
+  const knowledgeDocs = useKnowledgeSource ? await retrieveDocuments(prompt) : [];
   const contextBlock = formatAsContext(knowledgeDocs);
 
   const userMessage = buildUserMessage(prompt, iteration, contextBlock, previousDraft, revisionInstructions);

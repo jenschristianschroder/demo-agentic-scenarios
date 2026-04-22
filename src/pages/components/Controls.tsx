@@ -13,6 +13,8 @@ interface ControlsProps {
   onAcceptanceThresholdChange: (v: number) => void;
   maxIterations: number;
   onMaxIterationsChange: (v: number) => void;
+  generatorKnowledgeSource: boolean;
+  onGeneratorKnowledgeSourceChange: (v: boolean) => void;
   onRun: () => void;
   isRunning: boolean;
 }
@@ -28,6 +30,8 @@ const Controls: React.FC<ControlsProps> = ({
   onAcceptanceThresholdChange,
   maxIterations,
   onMaxIterationsChange,
+  generatorKnowledgeSource,
+  onGeneratorKnowledgeSourceChange,
   onRun,
   isRunning,
 }) => {
@@ -135,6 +139,31 @@ const Controls: React.FC<ControlsProps> = ({
               <option key={n} value={n}>{n}</option>
             ))}
           </select>
+        </div>
+      </div>
+
+      {/* Generator knowledge source toggle */}
+      <div className="controls-row">
+        <div className="control-group control-group-flex">
+          <span className="control-label">Generator Knowledge Source</span>
+          <div className="mode-toggle">
+            <button
+              type="button"
+              className={`mode-btn ${generatorKnowledgeSource ? 'mode-btn-active' : ''}`}
+              onClick={() => onGeneratorKnowledgeSourceChange(true)}
+              disabled={isRunning}
+            >
+              Enabled
+            </button>
+            <button
+              type="button"
+              className={`mode-btn ${!generatorKnowledgeSource ? 'mode-btn-active' : ''}`}
+              onClick={() => onGeneratorKnowledgeSourceChange(false)}
+              disabled={isRunning}
+            >
+              Disabled
+            </button>
+          </div>
         </div>
       </div>
 

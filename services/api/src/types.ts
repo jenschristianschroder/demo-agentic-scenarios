@@ -73,4 +73,5 @@ export interface OrchestrationRequest {
   workflowMode: WorkflowMode;
   acceptanceThreshold: number;
   maxIterations: number;
+  generatorKnowledgeSource: boolean;
 }
