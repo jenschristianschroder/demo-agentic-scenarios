@@ -1,0 +1,21 @@
+services:
+  multi-agent-spa:
+    build: .
+    ports:
+      - "3000:80"
+    environment:
+      - API_BACKEND_URL=http://multi-agent-api:3001
+    depends_on:
+      - multi-agent-api
+
+  multi-agent-api:
+    build: ./services/api
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}
+      - AZURE_OPENAI_DEPLOYMENT=${AZURE_OPENAI_DEPLOYMENT}
+      - AZURE_SEARCH_ENDPOINT=${AZURE_SEARCH_ENDPOINT}
+      - AZURE_SEARCH_INDEX=${AZURE_SEARCH_INDEX}
+      - CORS_ORIGIN=*

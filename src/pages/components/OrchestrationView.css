@@ -1,0 +1,122 @@
+/* ─── Orchestration View ───────────────────────────────────── */
+
+.orchestration-view {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  background: #fafafa;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 12px;
+}
+
+.orch-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #666666;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.orch-steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.orch-arrow {
+  display: flex;
+  align-items: center;
+  color: #cccccc;
+  transition: color 0.3s ease;
+}
+
+.orch-arrow-active {
+  color: #111111;
+}
+
+.orch-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 10px;
+  min-width: 80px;
+  background: #ffffff;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.orch-step:hover {
+  border-color: #999999;
+}
+
+.orch-step-reached {
+  border-color: #222222;
+}
+
+.orch-step-completed {
+  border-color: #222222;
+  background: #f0f0f0;
+}
+
+.orch-step-active {
+  border-color: #0078d4;
+  background: #f0f7ff;
+  box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.15);
+}
+
+.orch-step-selected {
+  border-color: #111111;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.1);
+}
+
+.orch-step-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #111111;
+}
+
+.orch-step-pulse {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 2px solid #0078d4;
+  animation: step-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes step-pulse {
+  0%, 100% { opacity: 0.3; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+.orch-step-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #444444;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* ─── Retry indicator ──────────────────────────────────────── */
+
+.orch-retry-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #666666;
+  background: #fff8e1;
+  border: 1px solid #ffe082;
+  border-radius: 8px;
+}

@@ -1,0 +1,132 @@
+name: Deploy to Azure Container Apps
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  APP_NAME: multi-agent
+  INFRA_DEPLOYMENT_NAME: multi-agent-infra
+  MAX_ACR_LOOKUP_ATTEMPTS: '12'
+  ACR_LOOKUP_SLEEP_SECONDS: '10'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # ─── Ensure resource group exists ──────────────────────────────────
+      - name: Ensure Resource Group exists
+        run: |
+          if [ -z "$LOCATION" ]; then
+            echo "::error::AZURE_LOCATION repository variable is not set. Configure it in Settings → Variables → Actions."
+            exit 1
+          fi
+          az group create \
+            --name "${{ secrets.AZURE_RESOURCE_GROUP }}" \
+            --location "$LOCATION"
+        env:
+          LOCATION: ${{ vars.AZURE_LOCATION }}
+
+      # ─── Deploy infrastructure (creates ACR if needed) ───────────────
+      - name: Deploy Bicep (infra only — placeholder images)
+        uses: azure/arm-deploy@v2
+        id: infra
+        continue-on-error: true
+        with:
+          deploymentName: ${{ env.INFRA_DEPLOYMENT_NAME }}
+          resourceGroupName: ${{ secrets.AZURE_RESOURCE_GROUP }}
+          template: infra/main.bicep
+          parameters: >-
+            imageTag=${{ github.sha }}
+          failOnStdErr: false
+
+      - name: Validate infra deployment failure reason
+        if: steps.infra.outcome == 'failure'
+        run: |
+          DEPLOYMENT_ERROR="$(az deployment group show --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" --name "${{ env.INFRA_DEPLOYMENT_NAME }}" --query properties.error -o json)"
+          echo "$DEPLOYMENT_ERROR"
+
+          if echo "$DEPLOYMENT_ERROR" | jq -e '.. | objects | .message? | strings | select(contains("MANIFEST_UNKNOWN"))' >/dev/null; then
+            echo "Detected expected MANIFEST_UNKNOWN in deployment error payload; continuing workflow."
+            exit 0
+          fi
+
+          DEPLOYMENT_OPERATIONS="$(az deployment operation group list --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" --name "${{ env.INFRA_DEPLOYMENT_NAME }}" --query "[?properties.provisioningState=='Failed'].properties.statusMessage" -o json)"
+          echo "$DEPLOYMENT_OPERATIONS"
+
+          if ! echo "$DEPLOYMENT_OPERATIONS" | jq -e '.[]? | .. | objects | .message? | strings | select(contains("MANIFEST_UNKNOWN"))' >/dev/null; then
+            echo "::error::Infra deployment failed for an unexpected reason."
+            exit 1
+          fi
+
+      - name: Resolve ACR login server
+        id: acr
+        run: |
+          ACR_LOGIN_SERVER="${{ steps.infra.outputs.acrLoginServer }}"
+
+          if [ -z "$ACR_LOGIN_SERVER" ]; then
+            for _ in $(seq 1 "${{ env.MAX_ACR_LOOKUP_ATTEMPTS }}"); do
+              ACR_LOGIN_SERVER="$(az acr list --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" --query "[0].loginServer" -o tsv)"
+              [ -n "$ACR_LOGIN_SERVER" ] && break
+              sleep "${{ env.ACR_LOOKUP_SLEEP_SECONDS }}"
+            done
+          fi
+
+          if [ -z "$ACR_LOGIN_SERVER" ]; then
+            echo "::error::Unable to resolve ACR login server from deployment output or resource group."
+            exit 1
+          fi
+
+          echo "acrLoginServer=$ACR_LOGIN_SERVER" >> "$GITHUB_OUTPUT"
+
+      # ─── Build & push container images ───────────────────────────────
+      - name: ACR Login
+        run: az acr login --name $(echo "${{ steps.acr.outputs.acrLoginServer }}" | cut -d. -f1)
+
+      - name: Build & push API image
+        run: |
+          docker build -t ${{ steps.acr.outputs.acrLoginServer }}/${{ env.APP_NAME }}-api:${{ github.sha }} ./services/api
+          docker push ${{ steps.acr.outputs.acrLoginServer }}/${{ env.APP_NAME }}-api:${{ github.sha }}
+
+      - name: Build & push SPA image
+        run: |
+          docker build -t ${{ steps.acr.outputs.acrLoginServer }}/${{ env.APP_NAME }}-spa:${{ github.sha }} .
+          docker push ${{ steps.acr.outputs.acrLoginServer }}/${{ env.APP_NAME }}-spa:${{ github.sha }}
+
+      # ─── Update container apps with new images ──────────────────────
+      - name: Update API Container App
+        run: |
+          az containerapp update \
+            --name ${{ env.APP_NAME }}-api \
+            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+            --image ${{ steps.acr.outputs.acrLoginServer }}/${{ env.APP_NAME }}-api:${{ github.sha }} \
+            --min-replicas 1
+
+      - name: Update SPA Container App
+        run: |
+          az containerapp update \
+            --name ${{ env.APP_NAME }}-spa \
+            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+            --image ${{ steps.acr.outputs.acrLoginServer }}/${{ env.APP_NAME }}-spa:${{ github.sha }} \
+            --min-replicas 1
+
+      - name: Output SPA URL
+        run: |
+          SPA_FQDN="$(az containerapp show --name ${{ env.APP_NAME }}-spa --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} --query properties.configuration.ingress.fqdn -o tsv)"
+          echo "🚀 SPA deployed to https://${SPA_FQDN}"

@@ -1,0 +1,109 @@
+/* ─── Run Summary ──────────────────────────────────────────── */
+
+.run-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  background: #fafafa;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 12px;
+}
+
+.run-summary-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #666666;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.run-summary-stats {
+  display: flex;
+  gap: 12px;
+}
+
+.stat-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 16px 8px;
+  background: #ffffff;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 10px;
+}
+
+.stat-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #111111;
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #666666;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+
+.stat-card-status {
+  border-width: 2px;
+}
+
+.stat-card-approved {
+  border-color: #a5d6a7;
+  background: #f1f8e9;
+}
+
+.stat-card-approved .stat-status-icon {
+  color: #2e7d32;
+}
+
+.stat-card-rejected {
+  border-color: #ef9a9a;
+  background: #fef2f2;
+}
+
+.stat-card-rejected .stat-status-icon {
+  color: #c62828;
+}
+
+.stat-card-review {
+  border-color: #ffe082;
+  background: #fff8e1;
+}
+
+.stat-card-review .stat-status-icon {
+  color: #f57f17;
+}
+
+/* ─── Final Output ─────────────────────────────────────────── */
+
+.run-summary-final {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.run-summary-final-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #666666;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.run-summary-final-text {
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: #111111;
+  padding: 16px;
+  background: #ffffff;
+  border: 1.5px solid #222222;
+  border-radius: 8px;
+}
