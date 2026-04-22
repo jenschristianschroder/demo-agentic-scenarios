@@ -1,131 +1,112 @@
 // ─── Fact-Checker Agent ──────────────────────────────────────────────────────
-// Validates generated content against the knowledge source.
-// When Azure AI Search is configured, queries the index for evidence.
-// Falls back to mock fact-checking for local development.
+// Validates generated claims by asking Azure OpenAI to evaluate each claim.
+// Uses structured outputs for reliable JSON responses.
 
 import type { FactCheckerOutput, FactualClaim, ClaimStatus } from '../types.js';
-import { isAzureConfigured } from '../azureClients.js';
+import { getOpenAIClient } from '../azureClients.js';
+
+const SYSTEM_PROMPT = `You are a fact-checker agent in a multi-agent content pipeline.
+
+Your job is to evaluate a list of factual claims for accuracy. For each claim, determine:
+- "supported": the claim is factually accurate based on your knowledge
+- "unsupported": the claim is factually incorrect or fabricated
+- "uncertain": you cannot confidently verify or refute the claim
+
+Also provide:
+- A brief evidence string for each claim explaining your reasoning
+- An overall score from 0.0 to 1.0 (proportion of supported claims)
+- A verdict: "approved" if all claims are supported, "needs-revision" if some are unsupported, "rejected" if most are unsupported
+- If verdict is not "approved", provide revisionInstructions explaining what needs to be fixed
+- A list of evidenceReferences (brief source descriptions for supported claims)
+
+Respond with valid JSON matching the provided schema.`;
 
 /**
- * Fact-check a list of claims against the knowledge source.
- *
- * @param claims - Claims extracted by the generator
- * @param draftText - The full draft text for context
+ * Fact-check a list of claims using Azure OpenAI.
  */
 export async function runFactChecker(
   claims: FactualClaim[],
   draftText: string
 ): Promise<FactCheckerOutput> {
-  if (isAzureConfigured()) {
-    return runAzureFactChecker(claims, draftText);
-  }
-  return runMockFactChecker(claims, draftText);
-}
+  const client = getOpenAIClient();
 
-// ─── Azure AI Search implementation (seam for real integration) ──────────────
+  const userMessage = `Draft text:\n---\n${draftText}\n---\n\nClaims to verify:\n${claims.map((c) => `- [${c.id}] ${c.text}`).join('\n')}`;
 
-async function runAzureFactChecker(
-  claims: FactualClaim[],
-  draftText: string
-): Promise<FactCheckerOutput> {
-  // TODO: Integrate with Azure AI Search + Azure OpenAI
-  // - Use getSearchConfig() for search endpoint/index/credential
-  // - For each claim, search the index for supporting evidence
-  // - Use Azure OpenAI to evaluate if the evidence supports the claim
-  // - Return structured verdict with claim-by-claim status
-  console.log('Azure fact-checker not yet implemented — falling back to mock');
-  return runMockFactChecker(claims, draftText);
-}
-
-// ─── Mock implementation for local dev ───────────────────────────────────────
-
-async function runMockFactChecker(
-  claims: FactualClaim[],
-  _draftText: string
-): Promise<FactCheckerOutput> {
-  // Simulate processing delay
-  await delay(1000 + Math.random() * 800);
-
-  // Mock knowledge base for verification
-  const knownFacts: Record<string, { status: ClaimStatus; evidence: string }> = {
-    'wind power': {
-      status: 'supported',
-      evidence: 'Danish Energy Agency reports confirm >50% wind electricity share.',
+  const response = await client.chat.completions.create({
+    model: process.env.AZURE_OPENAI_DEPLOYMENT || 'gpt-4o',
+    temperature: 0.1,
+    messages: [
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user', content: userMessage },
+    ],
+    response_format: {
+      type: 'json_schema',
+      json_schema: {
+        name: 'fact_checker_output',
+        strict: true,
+        schema: {
+          type: 'object',
+          properties: {
+            verdict: {
+              type: 'string',
+              enum: ['approved', 'needs-revision', 'rejected'],
+            },
+            score: { type: 'number' },
+            claims: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  text: { type: 'string' },
+                  status: {
+                    type: 'string',
+                    enum: ['supported', 'unsupported', 'uncertain'],
+                  },
+                  evidence: { type: 'string' },
+                },
+                required: ['id', 'text', 'status', 'evidence'],
+                additionalProperties: false,
+              },
+            },
+            revisionInstructions: { type: ['string', 'null'] },
+            evidenceReferences: {
+              type: 'array',
+              items: { type: 'string' },
+            },
+          },
+          required: ['verdict', 'score', 'claims', 'revisionInstructions', 'evidenceReferences'],
+          additionalProperties: false,
+        },
+      },
     },
-    'samsø': {
-      status: 'supported',
-      evidence: 'Samsø achieved 100% renewable energy status, widely documented.',
-    },
-    'nuclear fusion': {
-      status: 'unsupported',
-      evidence: 'No evidence of Denmark building a nuclear fusion reactor.',
-    },
-    'greenhouse gas': {
-      status: 'supported',
-      evidence: 'Danish Climate Act of 2020 codifies 70% reduction target by 2030.',
-    },
-    '70%': {
-      status: 'supported',
-      evidence: 'Danish Climate Act of 2020 codifies 70% reduction target by 2030.',
-    },
-  };
-
-  const checkedClaims: FactualClaim[] = claims.map((claim) => {
-    const lowerText = claim.text.toLowerCase();
-    let matchedStatus: ClaimStatus = 'uncertain';
-    let matchedEvidence = 'No matching evidence found in knowledge base.';
-
-    for (const [keyword, info] of Object.entries(knownFacts)) {
-      if (lowerText.includes(keyword)) {
-        matchedStatus = info.status;
-        matchedEvidence = info.evidence;
-        break;
-      }
-    }
-
-    return {
-      ...claim,
-      status: matchedStatus,
-      evidence: matchedEvidence,
-    };
   });
 
-  const supportedCount = checkedClaims.filter((c) => c.status === 'supported').length;
-  const unsupportedCount = checkedClaims.filter((c) => c.status === 'unsupported').length;
-  const score = checkedClaims.length > 0 ? supportedCount / checkedClaims.length : 1;
-
-  let verdict: FactCheckerOutput['verdict'];
-  let revisionInstructions: string | undefined;
-
-  if (unsupportedCount === 0) {
-    verdict = 'approved';
-  } else if (unsupportedCount > checkedClaims.length / 2) {
-    verdict = 'rejected';
-    revisionInstructions = `Multiple claims are unsupported. Remove or correct: ${checkedClaims
-      .filter((c) => c.status === 'unsupported')
-      .map((c) => `"${c.text}"`)
-      .join(', ')}`;
-  } else {
-    verdict = 'needs-revision';
-    revisionInstructions = `The following claims need correction: ${checkedClaims
-      .filter((c) => c.status === 'unsupported')
-      .map((c) => `"${c.text}"`)
-      .join(', ')}. Replace with verified facts from the knowledge base.`;
+  const content = response.choices[0]?.message?.content;
+  if (!content) {
+    throw new Error('Fact-checker received empty response from Azure OpenAI');
   }
 
-  const evidenceReferences = checkedClaims
-    .filter((c) => c.evidence && c.status === 'supported')
-    .map((c) => c.evidence!);
+  const parsed = JSON.parse(content) as {
+    verdict: 'approved' | 'needs-revision' | 'rejected';
+    score: number;
+    claims: { id: string; text: string; status: ClaimStatus; evidence: string }[];
+    revisionInstructions: string | null;
+    evidenceReferences: string[];
+  };
+
+  const checkedClaims: FactualClaim[] = parsed.claims.map((c) => ({
+    id: c.id,
+    text: c.text,
+    status: c.status,
+    evidence: c.evidence,
+  }));
 
   return {
-    verdict,
-    score,
+    verdict: parsed.verdict,
+    score: parsed.score,
     claims: checkedClaims,
-    revisionInstructions,
-    evidenceReferences: [...new Set(evidenceReferences)],
+    revisionInstructions: parsed.revisionInstructions ?? undefined,
+    evidenceReferences: parsed.evidenceReferences,
   };
-}
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }

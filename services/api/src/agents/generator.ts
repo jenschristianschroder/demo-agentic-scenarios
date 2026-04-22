@@ -1,19 +1,25 @@
 // ─── Generator Agent ─────────────────────────────────────────────────────────
 // Produces draft content from a prompt with configurable creativity.
-// When Azure OpenAI is configured, delegates to the model.
-// Falls back to mock generation for local development without Azure credentials.
+// Uses Azure OpenAI with structured outputs for reliable JSON responses.
 
 import type { GeneratorOutput, FactualClaim } from '../types.js';
-import { isAzureConfigured } from '../azureClients.js';
+import { getOpenAIClient } from '../azureClients.js';
+
+const SYSTEM_PROMPT = `You are a content generator agent in a multi-agent fact-checking pipeline.
+
+Your job is to produce factual, well-written content based on the user's prompt.
+Extract every distinct factual claim you make into a separate claim object.
+
+IMPORTANT RULES:
+- Each claim must be a single, verifiable factual statement.
+- Assign each claim a unique id like "claim-{iteration}-{n}" where iteration is provided and n is sequential starting at 1.
+- If you are revising a previous draft, incorporate the revision instructions to fix incorrect claims.
+- Do NOT repeat claims that were flagged as unsupported — replace them with correct, verifiable facts.
+
+Respond with valid JSON matching the provided schema.`;
 
 /**
  * Generate draft content and extract factual claims.
- *
- * @param prompt - The user's original prompt or revision instructions
- * @param creativityLevel - 0 (precise) to 1 (creative / hallucination-prone)
- * @param iteration - Current iteration number
- * @param previousDraft - Previous draft text when revising
- * @param revisionInstructions - Instructions from the fact-checker on what to fix
  */
 export async function runGenerator(
   prompt: string,
@@ -22,78 +28,79 @@ export async function runGenerator(
   previousDraft?: string,
   revisionInstructions?: string
 ): Promise<GeneratorOutput> {
-  if (isAzureConfigured()) {
-    return runAzureGenerator(prompt, creativityLevel, iteration, previousDraft, revisionInstructions);
+  const client = getOpenAIClient();
+  const userMessage = buildUserMessage(prompt, iteration, previousDraft, revisionInstructions);
+
+  const response = await client.chat.completions.create({
+    model: process.env.AZURE_OPENAI_DEPLOYMENT || 'gpt-4o',
+    temperature: creativityLevel,
+    messages: [
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user', content: userMessage },
+    ],
+    response_format: {
+      type: 'json_schema',
+      json_schema: {
+        name: 'generator_output',
+        strict: true,
+        schema: {
+          type: 'object',
+          properties: {
+            draftText: { type: 'string' },
+            claims: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  text: { type: 'string' },
+                },
+                required: ['id', 'text'],
+                additionalProperties: false,
+              },
+            },
+          },
+          required: ['draftText', 'claims'],
+          additionalProperties: false,
+        },
+      },
+    },
+  });
+
+  const content = response.choices[0]?.message?.content;
+  if (!content) {
+    throw new Error('Generator received empty response from Azure OpenAI');
   }
-  return runMockGenerator(prompt, creativityLevel, iteration, previousDraft, revisionInstructions);
-}
 
-// ─── Azure OpenAI implementation (seam for real integration) ─────────────────
+  const parsed = JSON.parse(content) as { draftText: string; claims: { id: string; text: string }[] };
 
-async function runAzureGenerator(
-  prompt: string,
-  creativityLevel: number,
-  iteration: number,
-  previousDraft?: string,
-  revisionInstructions?: string
-): Promise<GeneratorOutput> {
-  // TODO: Integrate with Azure OpenAI SDK
-  // - Use getOpenAIConfig() for endpoint/deployment/credential
-  // - Set temperature = creativityLevel
-  // - System prompt should instruct the model to:
-  //   1. Write factual content
-  //   2. Return structured JSON with draftText and claims array
-  //   3. If revising, incorporate the revision instructions
-  // - Use Azure AI Search for RAG grounding
-  console.log('Azure generator not yet implemented — falling back to mock');
-  return runMockGenerator(prompt, creativityLevel, iteration, previousDraft, revisionInstructions);
-}
-
-// ─── Mock implementation for local dev ───────────────────────────────────────
-
-async function runMockGenerator(
-  prompt: string,
-  creativityLevel: number,
-  iteration: number,
-  _previousDraft?: string,
-  revisionInstructions?: string
-): Promise<GeneratorOutput> {
-  // Simulate processing delay
-  await delay(800 + Math.random() * 600);
-
-  const isRevision = iteration > 1 && revisionInstructions;
-
-  // Higher creativity → more "hallucinated" claims
-  const hallucinate = creativityLevel > 0.5;
-
-  const claims: FactualClaim[] = [
-    {
-      id: `claim-${iteration}-1`,
-      text: 'Denmark generates over 50% of its electricity from wind power.',
-    },
-    {
-      id: `claim-${iteration}-2`,
-      text: 'The Danish island of Samsø became 100% renewable energy powered by 2007.',
-    },
-    {
-      id: `claim-${iteration}-3`,
-      text: hallucinate && !isRevision
-        ? 'Denmark was the first country to build a nuclear fusion reactor in 2019.'
-        : 'Denmark has set a target to reduce greenhouse gas emissions by 70% by 2030.',
-    },
-  ];
-
-  const draftText = isRevision
-    ? `[Revised draft — iteration ${iteration}] Based on the prompt "${prompt}", here is an updated summary incorporating fact-check feedback: ${claims.map((c) => c.text).join(' ')}`
-    : `Based on the prompt "${prompt}", here is a summary: ${claims.map((c) => c.text).join(' ')}`;
+  const claims: FactualClaim[] = parsed.claims.map((c, i) => ({
+    id: c.id || `claim-${iteration}-${i + 1}`,
+    text: c.text,
+  }));
 
   return {
-    draftText,
+    draftText: parsed.draftText,
     claims,
     iteration,
   };
 }
 
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+function buildUserMessage(
+  prompt: string,
+  iteration: number,
+  previousDraft?: string,
+  revisionInstructions?: string
+): string {
+  let message = `Prompt: ${prompt}\nIteration: ${iteration}\n`;
+
+  if (iteration > 1 && previousDraft && revisionInstructions) {
+    message += `\nYou are REVISING a previous draft. Here is the previous draft:\n---\n${previousDraft}\n---\n`;
+    message += `\nRevision instructions from the fact-checker:\n${revisionInstructions}\n`;
+    message += `\nFix the issues identified above. Keep correct claims, replace incorrect ones with verified facts.`;
+  } else {
+    message += `\nWrite an informative, factual response to this prompt. Use claim IDs starting with "claim-${iteration}-".`;
+  }
+
+  return message;
 }
