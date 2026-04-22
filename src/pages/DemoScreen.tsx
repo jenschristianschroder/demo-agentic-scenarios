@@ -12,6 +12,7 @@ import { runOrchestration } from '../services/orchestrationApi';
 import Controls from './components/Controls';
 import OrchestrationView from './components/OrchestrationView';
 import StepDetail from './components/StepDetail';
+import IterationLog from './components/IterationLog';
 import RunSummaryPanel from './components/RunSummary';
 import './DemoScreen.css';
 
@@ -199,6 +200,11 @@ const DemoScreen: React.FC = () => {
           isRunning={isRunning}
           events={events}
         />
+
+        {/* Live iteration log for auto-revise mode */}
+        {workflowMode === 'auto-revise' && iterations.length > 0 && (
+          <IterationLog iterations={iterations} isRunning={isRunning} />
+        )}
 
         {error && <div className="demo-error">{error}</div>}
 
