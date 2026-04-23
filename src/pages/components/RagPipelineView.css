@@ -1,0 +1,125 @@
+/* ─── RAG Pipeline View ───────────────────────────────────── */
+
+.rag-pipeline-view {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  background: #fafafa;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 12px;
+}
+
+.rag-pipeline-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #666666;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.rag-pipeline-steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.rag-arrow {
+  display: flex;
+  align-items: center;
+  color: #cccccc;
+  transition: color 0.3s ease;
+}
+
+.rag-arrow-active {
+  color: #111111;
+}
+
+.rag-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 14px;
+  min-width: 90px;
+  background: #ffffff;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 10px;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.rag-step-reached {
+  border-color: #222222;
+}
+
+.rag-step-completed {
+  border-color: #222222;
+  background: #f0f0f0;
+}
+
+.rag-step-active {
+  border-color: #0078d4;
+  background: #f0f7ff;
+  box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.15);
+}
+
+.rag-step-skipped {
+  border-color: #e0e0e0;
+  background: #f9f9f9;
+  opacity: 0.5;
+}
+
+.rag-step-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #111111;
+}
+
+.rag-step-skipped .rag-step-icon {
+  color: #999999;
+}
+
+.rag-step-pulse {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 2px solid #0078d4;
+  animation: rag-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes rag-pulse {
+  0%, 100% { opacity: 0.3; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+.rag-step-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #444444;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.rag-step-skipped .rag-step-label {
+  text-decoration: line-through;
+  color: #999999;
+}
+
+.rag-step-skip-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  font-size: 0.5625rem;
+  font-weight: 700;
+  color: #ffffff;
+  background: #999999;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}

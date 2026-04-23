@@ -1,0 +1,172 @@
+/* ─── Retrieved Documents ──────────────────────────────────── */
+
+.retrieved-docs {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  background: #fafafa;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 12px;
+}
+
+.retrieved-docs-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #666666;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.retrieved-docs-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #ffffff;
+  background: #111111;
+  border-radius: 10px;
+}
+
+.retrieved-docs-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 24px;
+  font-size: 0.875rem;
+  color: #999999;
+  text-align: center;
+}
+
+.retrieved-docs-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 24px;
+}
+
+.retrieved-docs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.doc-card {
+  background: #ffffff;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: border-color 0.15s ease;
+}
+
+.doc-card:hover {
+  border-color: #999999;
+}
+
+.doc-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.doc-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.doc-card-rank {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #999999;
+  flex-shrink: 0;
+}
+
+.doc-card-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #111111;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.doc-card-score-area {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.doc-card-score-bar {
+  width: 60px;
+  height: 6px;
+  background: #e0e0e0;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.doc-card-score-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4caf50, #81c784);
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+
+.doc-card-score-text {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #666666;
+  min-width: 32px;
+  text-align: right;
+}
+
+.doc-card-chevron {
+  flex-shrink: 0;
+  color: #999999;
+  transition: transform 0.2s ease;
+}
+
+.doc-card-chevron-open {
+  transform: rotate(180deg);
+}
+
+.doc-card-body {
+  padding: 0 16px 16px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.doc-card-source {
+  font-size: 0.75rem;
+  color: #999999;
+  margin-top: 12px;
+  margin-bottom: 8px;
+}
+
+.doc-card-source-label {
+  font-weight: 600;
+}
+
+.doc-card-content {
+  font-size: 0.8125rem;
+  color: #333333;
+  line-height: 1.55;
+  max-height: 200px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+}

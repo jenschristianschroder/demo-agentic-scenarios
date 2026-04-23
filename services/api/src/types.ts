@@ -75,3 +75,32 @@ export interface OrchestrationRequest {
   maxIterations: number;
   generatorKnowledgeSource: boolean;
 }
+
+// ─── RAG Pipeline Contracts ─────────────────────────────────────────────────
+
+export type RagStep = 'user-request' | 'retrieval' | 'generation' | 'final-answer';
+
+export interface RetrievalResult {
+  content: string;
+  source: string;
+  title: string;
+  score: number;
+}
+
+export interface RagEvent {
+  type: 'step-start' | 'step-complete' | 'error' | 'done';
+  step: RagStep;
+  timestamp: string;
+  data:
+    | RetrievalResult[]
+    | { text: string }
+    | { prompt: string }
+    | { message: string }
+    | null;
+}
+
+export interface RagRequest {
+  prompt: string;
+  ragEnabled: boolean;
+  creativityLevel: number;
+}

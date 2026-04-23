@@ -98,7 +98,7 @@ export const STEP_LABELS: Record<AgentStep, string> = {
 
 // ─── Scenario / Features definitions ─────────────────────────────────────────
 
-export type ScenarioId = 'multi-agent-orchestration';
+export type ScenarioId = 'multi-agent-orchestration' | 'rag-pipeline';
 
 export interface ScenarioInfo {
   id: ScenarioId;
@@ -117,4 +117,48 @@ export const SCENARIOS: ScenarioInfo[] = [
     icon: '🤖',
     route: '/demo',
   },
+  {
+    id: 'rag-pipeline',
+    label: 'RAG Pipeline',
+    description:
+      'See how Retrieval-Augmented Generation grounds LLM responses with real documents — toggle RAG on and off to compare',
+    icon: '📚',
+    route: '/rag-demo',
+  },
 ];
+
+// ─── RAG Pipeline Contracts ─────────────────────────────────────────────────
+
+export type RagStep = 'user-request' | 'retrieval' | 'generation' | 'final-answer';
+
+export const RAG_STEP_LABELS: Record<RagStep, string> = {
+  'user-request': 'Query',
+  retrieval: 'Retrieval',
+  generation: 'Generation',
+  'final-answer': 'Response',
+};
+
+export interface RetrievalResult {
+  content: string;
+  source: string;
+  title: string;
+  score: number;
+}
+
+export interface RagEvent {
+  type: 'step-start' | 'step-complete' | 'error' | 'done';
+  step: RagStep;
+  timestamp: string;
+  data:
+    | RetrievalResult[]
+    | { text: string }
+    | { prompt: string }
+    | { message: string }
+    | null;
+}
+
+export interface RagRequest {
+  prompt: string;
+  ragEnabled: boolean;
+  creativityLevel: number;
+}
