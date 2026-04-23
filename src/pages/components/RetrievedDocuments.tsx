@@ -58,7 +58,7 @@ const RetrievedDocuments: React.FC<RetrievedDocumentsProps> = ({
       <div className="retrieved-docs-list">
         {documents.map((doc, idx) => {
           const isExpanded = expandedIdx === idx;
-          const scorePercent = Math.round(doc.score * 100);
+          const scorePercent = Math.round(Math.min(doc.score / 4, 1) * 100);
 
           return (
             <div key={idx} className="doc-card">
