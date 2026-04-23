@@ -110,14 +110,6 @@ export interface ScenarioInfo {
 
 export const SCENARIOS: ScenarioInfo[] = [
   {
-    id: 'multi-agent-orchestration',
-    label: 'Multi-Agent Orchestration',
-    description:
-      'An orchestrator coordinates content generation and fact-checking agents in an iterative loop with real-time visibility',
-    icon: '🤖',
-    route: '/demo',
-  },
-  {
     id: 'rag-pipeline',
     label: 'RAG Pipeline',
     description:
@@ -132,6 +124,14 @@ export const SCENARIOS: ScenarioInfo[] = [
       'Watch the model decide which tools to call, see arguments and results in real time — the LLM drives the workflow',
     icon: '🔧',
     route: '/tool-demo',
+  },
+  {
+    id: 'multi-agent-orchestration',
+    label: 'Multi-Agent Orchestration',
+    description:
+      'An orchestrator coordinates content generation and fact-checking agents in an iterative loop with real-time visibility',
+    icon: '🤖',
+    route: '/demo',
   },
 ];
 
