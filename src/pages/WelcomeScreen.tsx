@@ -23,10 +23,10 @@ const WelcomeScreen: React.FC = () => {
 
         <button
           className="welcome-cta"
-          onClick={() => navigate('/demo')}
+          onClick={() => navigate('/features')}
           type="button"
         >
-          Get Started
+          Try the Demos
         </button>
       </div>
 

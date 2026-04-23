@@ -95,3 +95,26 @@ export const STEP_LABELS: Record<AgentStep, string> = {
   'fact-checker': 'Fact Checker',
   'final-answer': 'Final Answer',
 };
+
+// ─── Scenario / Features definitions ─────────────────────────────────────────
+
+export type ScenarioId = 'multi-agent-orchestration';
+
+export interface ScenarioInfo {
+  id: ScenarioId;
+  label: string;
+  description: string;
+  icon: string;
+  route: string;
+}
+
+export const SCENARIOS: ScenarioInfo[] = [
+  {
+    id: 'multi-agent-orchestration',
+    label: 'Multi-Agent Orchestration',
+    description:
+      'An orchestrator coordinates content generation and fact-checking agents in an iterative loop with real-time visibility',
+    icon: '🤖',
+    route: '/demo',
+  },
+];
