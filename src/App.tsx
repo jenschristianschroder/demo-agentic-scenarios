@@ -4,6 +4,7 @@ import WelcomeScreen from './pages/WelcomeScreen';
 import FeaturesScreen from './pages/FeaturesScreen';
 import DemoScreen from './pages/DemoScreen';
 import RagDemoScreen from './pages/RagDemoScreen';
+import ToolDemoScreen from './pages/ToolDemoScreen';
 
 const App: React.FC = () => {
   return (
@@ -12,6 +13,7 @@ const App: React.FC = () => {
       <Route path="/features" element={<FeaturesScreen />} />
       <Route path="/demo" element={<DemoScreen />} />
       <Route path="/rag-demo" element={<RagDemoScreen />} />
+      <Route path="/tool-demo" element={<ToolDemoScreen />} />
     </Routes>
   );
 };

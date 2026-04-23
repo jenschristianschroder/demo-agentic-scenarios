@@ -98,7 +98,7 @@ export const STEP_LABELS: Record<AgentStep, string> = {
 
 // ─── Scenario / Features definitions ─────────────────────────────────────────
 
-export type ScenarioId = 'multi-agent-orchestration' | 'rag-pipeline';
+export type ScenarioId = 'multi-agent-orchestration' | 'rag-pipeline' | 'tool-use';
 
 export interface ScenarioInfo {
   id: ScenarioId;
@@ -124,6 +124,14 @@ export const SCENARIOS: ScenarioInfo[] = [
       'See how Retrieval-Augmented Generation grounds LLM responses with real documents — toggle RAG on and off to compare',
     icon: '📚',
     route: '/rag-demo',
+  },
+  {
+    id: 'tool-use',
+    label: 'Tool-Use Agent',
+    description:
+      'Watch the model decide which tools to call, see arguments and results in real time — the LLM drives the workflow',
+    icon: '🔧',
+    route: '/tool-demo',
   },
 ];
 
@@ -160,5 +168,48 @@ export interface RagEvent {
 export interface RagRequest {
   prompt: string;
   ragEnabled: boolean;
+  creativityLevel: number;
+}
+
+// ─── Tool-Use Agent Contracts ────────────────────────────────────────────────
+
+export type ToolStep = 'user-request' | 'reasoning' | 'tool-call' | 'final-answer';
+
+export const TOOL_STEP_LABELS: Record<ToolStep, string> = {
+  'user-request': 'Query',
+  reasoning: 'Reasoning',
+  'tool-call': 'Tool Call',
+  'final-answer': 'Answer',
+};
+
+export interface ToolDefinition {
+  name: string;
+  description: string;
+  parameters: Record<string, unknown>;
+}
+
+export interface ToolCallRecord {
+  id: string;
+  toolName: string;
+  arguments: Record<string, unknown>;
+  result: unknown;
+  durationMs: number;
+}
+
+export interface ToolEvent {
+  type: 'step-start' | 'step-complete' | 'tool-call-start' | 'tool-call-complete' | 'error' | 'done';
+  step: ToolStep;
+  timestamp: string;
+  data:
+    | { message: string }
+    | { prompt: string }
+    | { tools: ToolDefinition[] }
+    | ToolCallRecord
+    | { text: string; toolCalls: ToolCallRecord[] }
+    | null;
+}
+
+export interface ToolRequest {
+  prompt: string;
   creativityLevel: number;
 }

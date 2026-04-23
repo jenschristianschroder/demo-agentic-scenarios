@@ -1,0 +1,92 @@
+/* ─── Tool Inventory ─────────────────────────────────────── */
+
+.tool-inventory {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  background: #fafafa;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 12px;
+}
+
+.tool-inventory-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #666666;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.tool-inventory-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tool-inventory-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: #ffffff;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.tool-inventory-item-used {
+  border-color: #222222;
+  background: #f0f0f0;
+}
+
+.tool-inventory-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  background: #f0f0f0;
+  border-radius: 6px;
+  color: #111111;
+}
+
+.tool-inventory-item-used .tool-inventory-icon {
+  background: #222222;
+  color: #ffffff;
+}
+
+.tool-inventory-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.tool-inventory-name {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #111111;
+}
+
+.tool-inventory-desc {
+  font-size: 0.6875rem;
+  color: #888888;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tool-inventory-badge {
+  font-size: 0.625rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #1b5e20;
+  background: #e8f5e9;
+  border: 1px solid #a5d6a7;
+  flex-shrink: 0;
+}

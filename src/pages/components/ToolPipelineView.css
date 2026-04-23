@@ -1,0 +1,112 @@
+/* ─── Tool Pipeline View ─────────────────────────────────── */
+
+.tool-pipeline-view {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  background: #fafafa;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 12px;
+}
+
+.tool-pipeline-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #666666;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.tool-pipeline-steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.tool-arrow {
+  display: flex;
+  align-items: center;
+  color: #cccccc;
+  transition: color 0.3s ease;
+}
+
+.tool-arrow-active {
+  color: #111111;
+}
+
+.tool-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 14px;
+  min-width: 90px;
+  background: #ffffff;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 10px;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.tool-step-reached {
+  border-color: #222222;
+}
+
+.tool-step-completed {
+  border-color: #222222;
+  background: #f0f0f0;
+}
+
+.tool-step-active {
+  border-color: #0078d4;
+  background: #f0f7ff;
+  box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.15);
+}
+
+.tool-step-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #111111;
+}
+
+.tool-step-pulse {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 2px solid #0078d4;
+  animation: tool-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes tool-pulse {
+  0%, 100% { opacity: 0.3; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+.tool-step-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #333333;
+  white-space: nowrap;
+}
+
+.tool-step-count {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  font-size: 0.5625rem;
+  font-weight: 700;
+  color: #ffffff;
+  background: #0078d4;
+  border-radius: 9px;
+  padding: 0 4px;
+}

@@ -76,6 +76,42 @@ export interface OrchestrationRequest {
   generatorKnowledgeSource: boolean;
 }
 
+// ─── Tool-Use Agent Contracts ────────────────────────────────────────────────
+
+export type ToolStep = 'user-request' | 'reasoning' | 'tool-call' | 'final-answer';
+
+export interface ToolDefinition {
+  name: string;
+  description: string;
+  parameters: Record<string, unknown>;
+}
+
+export interface ToolCallRecord {
+  id: string;
+  toolName: string;
+  arguments: Record<string, unknown>;
+  result: unknown;
+  durationMs: number;
+}
+
+export interface ToolEvent {
+  type: 'step-start' | 'step-complete' | 'tool-call-start' | 'tool-call-complete' | 'error' | 'done';
+  step: ToolStep;
+  timestamp: string;
+  data:
+    | { message: string }
+    | { prompt: string }
+    | { tools: ToolDefinition[] }
+    | ToolCallRecord
+    | { text: string; toolCalls: ToolCallRecord[] }
+    | null;
+}
+
+export interface ToolRequest {
+  prompt: string;
+  creativityLevel: number;
+}
+
 // ─── RAG Pipeline Contracts ─────────────────────────────────────────────────
 
 export type RagStep = 'user-request' | 'retrieval' | 'generation' | 'final-answer';
