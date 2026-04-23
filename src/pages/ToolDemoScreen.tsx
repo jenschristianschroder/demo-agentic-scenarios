@@ -1,5 +1,4 @@
 import React, { useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import type { ToolStep, ToolEvent, ToolCallRecord, ToolDefinition, ToolRequest } from '../types';
 import { runToolAgent } from '../services/toolsApi';
 import ToolPipelineView from './components/ToolPipelineView';
@@ -8,7 +7,6 @@ import ToolTimeline from './components/ToolTimeline';
 import './ToolDemoScreen.css';
 
 const ToolDemoScreen: React.FC = () => {
-  const navigate = useNavigate();
 
   // ─── Controls state ───────────────────────────────────────────────────────
   const [prompt, setPrompt] = useState(
@@ -98,28 +96,7 @@ const ToolDemoScreen: React.FC = () => {
   return (
     <div className="tool-screen">
       <div className="tool-header">
-        <button
-          className="header-btn"
-          onClick={() => navigate('/features')}
-          type="button"
-          aria-label="Back"
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
-        </button>
         <span className="tool-header-title">Tool-Use Agent Demo</span>
-        <button
-          className="header-btn header-btn-close"
-          onClick={() => navigate('/')}
-          type="button"
-          aria-label="Close"
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
-        </button>
       </div>
 
       <div className="tool-content kiosk-container">

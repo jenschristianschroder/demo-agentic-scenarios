@@ -1,5 +1,4 @@
 import React, { useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import type {
   OrchestrationRequest,
   OrchestrationEvent,
@@ -17,7 +16,6 @@ import RunSummaryPanel from './components/RunSummary';
 import './DemoScreen.css';
 
 const DemoScreen: React.FC = () => {
-  const navigate = useNavigate();
 
   // ─── Controls state ───────────────────────────────────────────────────────
   const [prompt, setPrompt] = useState('Write a product overview for Contoso Electronics\' latest laptop lineup, including model names, specifications, and pricing.');
@@ -154,28 +152,7 @@ const DemoScreen: React.FC = () => {
   return (
     <div className="demo-screen">
       <div className="demo-header">
-        <button
-          className="header-btn"
-          onClick={() => navigate('/')}
-          type="button"
-          aria-label="Back"
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
-        </button>
         <span className="demo-header-title">Multi-Agent Demo</span>
-        <button
-          className="header-btn header-btn-close"
-          onClick={() => navigate('/')}
-          type="button"
-          aria-label="Close"
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
-        </button>
       </div>
 
       <div className="demo-content kiosk-container">
