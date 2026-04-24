@@ -1,96 +1,100 @@
 // ─── Product Specialist Agent ────────────────────────────────────────────────
-// Searches the Contoso product catalog to find devices matching customer
-// requirements. Uses deterministic catalog lookups for reliability.
+// Searches the Contoso product catalog using RAG (Azure AI Search) and then
+// has the LLM evaluate and rank candidates against customer requirements.
 
 import type { CustomerRequirements, ProductCandidate } from '../types.js';
-import { PRODUCTS } from '../tools/productCatalog.js';
-import type { Product } from '../tools/productCatalog.js';
+import { getOpenAIClient } from '../azureClients.js';
+import { retrieveDocuments, formatAsContext } from './searchRetriever.js';
+
+const SYSTEM_PROMPT = `You are a Product Specialist Agent for Contoso Electronics.
+
+Your job is to evaluate product information from the knowledge base and rank candidates based on how well they match the customer's requirements.
+
+For each product found in the knowledge base, evaluate:
+- Battery life fit (does it meet the customer's needs?)
+- Weight and portability
+- Operating system (Windows 11 Pro preferred for business)
+- Warranty and support level
+- Price vs per-unit budget
+- Overall suitability for the stated use case
+
+Exclude tablets (Android devices) — only recommend laptops.
+
+Return an array of product candidates sorted by fit score (highest first).
+Each candidate must include: name, category, priceDKK, keySpecs, batteryLife, weight, warranty, fitScore (0-15), and fitReason.
+
+Respond with valid JSON matching the provided schema.`;
 
 /**
- * Parse battery hours from the battery string (e.g. "72 Wh, up to 16 hours" → 16).
+ * Find candidate products using RAG retrieval + LLM evaluation.
  */
-function parseBatteryHours(battery: string): number {
-  const match = battery.match(/up to (\d+) hours/);
-  return match ? parseInt(match[1], 10) : 0;
-}
+export async function findProductCandidates(reqs: CustomerRequirements): Promise<ProductCandidate[]> {
+  const client = getOpenAIClient();
 
-/**
- * Parse weight in kg from the weight string (e.g. "1.29 kg (2.84 lbs)" → 1.29).
- */
-function parseWeightKg(weight: string): number {
-  const match = weight.match(/([\d.]+)\s*kg/);
-  return match ? parseFloat(match[1]) : 99;
-}
+  // ── RAG: retrieve product information from Azure AI Search ─────────────
+  const searchQuery = `${reqs.useCase} laptop ${reqs.priorities.join(' ')} business`;
+  const docs = await retrieveDocuments(searchQuery, 10);
+  const knowledgeContext = formatAsContext(docs);
 
-/**
- * Score a product against customer requirements.
- */
-function scoreProduct(product: Product, reqs: CustomerRequirements): { score: number; reasons: string[] } {
-  let score = 0;
-  const reasons: string[] = [];
+  const perUnitBudget = Math.floor(reqs.budgetDKK / reqs.quantity);
 
-  // Only consider laptops (not tablets)
-  if (product.os.includes('Android')) {
-    return { score: -1, reasons: ['Not a laptop — tablet excluded'] };
-  }
+  const userMessage = `Customer Requirements:
+- Quantity: ${reqs.quantity}
+- Total budget: DKK ${reqs.budgetDKK.toLocaleString()}
+- Per-unit budget: DKK ${perUnitBudget.toLocaleString()}
+- Use case: ${reqs.useCase}
+- Priorities: ${reqs.priorities.join(', ')}
+- Warranty needs: ${reqs.warrantyNeeds}
+- Additional notes: ${reqs.additionalNotes}
+${knowledgeContext}
 
-  // Battery priority
-  const batteryHours = parseBatteryHours(product.battery);
-  if (reqs.priorities.some(p => p.toLowerCase().includes('battery'))) {
-    if (batteryHours >= 16) { score += 3; reasons.push(`Excellent battery: ${batteryHours}h`); }
-    else if (batteryHours >= 12) { score += 2; reasons.push(`Good battery: ${batteryHours}h`); }
-    else { score += 1; reasons.push(`Moderate battery: ${batteryHours}h`); }
-  } else {
-    if (batteryHours >= 12) { score += 1; reasons.push(`${batteryHours}h battery`); }
-  }
+Based on the knowledge base documents above, identify all matching laptop products and evaluate them against the customer requirements. Return the candidates sorted by fit score.`;
 
-  // Weight priority
-  const weightKg = parseWeightKg(product.weight);
-  if (reqs.priorities.some(p => p.toLowerCase().includes('weight') || p.toLowerCase().includes('light') || p.toLowerCase().includes('portable'))) {
-    if (weightKg <= 1.0) { score += 3; reasons.push(`Ultra-light: ${product.weight}`); }
-    else if (weightKg <= 1.5) { score += 2; reasons.push(`Lightweight: ${product.weight}`); }
-    else { score += 1; reasons.push(`${product.weight}`); }
-  }
+  const response = await client.chat.completions.create({
+    model: process.env.AZURE_OPENAI_DEPLOYMENT || 'gpt-4o',
+    temperature: 0.2,
+    messages: [
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user', content: userMessage },
+    ],
+    response_format: {
+      type: 'json_schema',
+      json_schema: {
+        name: 'product_candidates',
+        strict: true,
+        schema: {
+          type: 'object',
+          properties: {
+            candidates: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string' },
+                  category: { type: 'string' },
+                  priceDKK: { type: 'number' },
+                  keySpecs: { type: 'string' },
+                  batteryLife: { type: 'string' },
+                  weight: { type: 'string' },
+                  warranty: { type: 'string' },
+                  fitScore: { type: 'number' },
+                  fitReason: { type: 'string' },
+                },
+                required: ['name', 'category', 'priceDKK', 'keySpecs', 'batteryLife', 'weight', 'warranty', 'fitScore', 'fitReason'],
+                additionalProperties: false,
+              },
+            },
+          },
+          required: ['candidates'],
+          additionalProperties: false,
+        },
+      },
+    },
+  });
 
-  // Business OS
-  if (product.os.includes('Pro')) { score += 2; reasons.push('Windows 11 Pro'); }
-  else if (product.os.includes('Home')) { score += 1; reasons.push('Windows 11 Home (not Pro)'); }
-  else { reasons.push(product.os); }
+  const content = response.choices[0]?.message?.content;
+  if (!content) throw new Error('Product Specialist received empty response');
 
-  // Warranty/business support
-  if (product.warranty.includes('on-site')) { score += 2; reasons.push(`Business warranty: ${product.warranty}`); }
-  else { reasons.push(`Warranty: ${product.warranty}`); }
-
-  // Budget fit (per unit)
-  const perUnitBudget = reqs.budgetDKK / reqs.quantity;
-  if (product.priceDKK <= perUnitBudget) { score += 2; reasons.push('Within per-unit budget'); }
-  else { reasons.push(`Over per-unit budget by DKK ${(product.priceDKK - perUnitBudget).toLocaleString()}`); }
-
-  return { score, reasons };
-}
-
-/**
- * Find candidate products sorted by fit score.
- */
-export function findProductCandidates(reqs: CustomerRequirements): ProductCandidate[] {
-  const candidates: ProductCandidate[] = [];
-
-  for (const product of Object.values(PRODUCTS)) {
-    const { score, reasons } = scoreProduct(product, reqs);
-    if (score < 0) continue; // excluded (e.g. tablets)
-
-    candidates.push({
-      name: product.name,
-      category: product.category,
-      priceDKK: product.priceDKK,
-      keySpecs: `${product.processor}, ${product.memory}, ${product.storage}`,
-      batteryLife: product.battery,
-      weight: product.weight,
-      warranty: product.warranty,
-      fitScore: score,
-      fitReason: reasons.join('. '),
-    });
-  }
-
-  return candidates.sort((a, b) => b.fitScore - a.fitScore);
+  const parsed = JSON.parse(content) as { candidates: ProductCandidate[] };
+  return parsed.candidates.sort((a, b) => b.fitScore - a.fitScore);
 }

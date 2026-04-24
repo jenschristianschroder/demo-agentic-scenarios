@@ -94,7 +94,7 @@ export async function runProposalOrchestrator(
       data: null,
     });
 
-    const candidates: ProductCandidate[] = findProductCandidates(requirements);
+    const candidates: ProductCandidate[] = await findProductCandidates(requirements);
     const topCandidates = candidates.slice(0, 3); // Top 3 for the demo
 
     sendEvent(res, {
