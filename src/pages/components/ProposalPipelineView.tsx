@@ -9,6 +9,8 @@ interface ProposalPipelineViewProps {
   onSelectStep: (step: ProposalStep) => void;
   isRunning: boolean;
   events: ProposalEvent[];
+  /** Steps currently in-flight (started but not completed). Enables parallel spinners. */
+  inProgressSteps?: Set<ProposalStep>;
 }
 
 const STEPS: ProposalStep[] = [
@@ -92,6 +94,7 @@ const ProposalPipelineView: React.FC<ProposalPipelineViewProps> = ({
   onSelectStep,
   isRunning,
   events,
+  inProgressSteps,
 }) => {
   if (!activeStep && events.length === 0) return null;
 
@@ -100,10 +103,12 @@ const ProposalPipelineView: React.FC<ProposalPipelineViewProps> = ({
       <div className="proposal-pipeline-label">Proposal Pipeline</div>
       <div className="proposal-pipeline-steps">
         {STEPS.map((step, idx) => {
-          const isActive = activeStep === step;
           const isSelected = selectedStep === step;
           const reached = isStepReached(step, events);
           const completed = isStepCompleted(step, events);
+          const isInProgress = inProgressSteps
+            ? inProgressSteps.has(step)
+            : (activeStep === step && isRunning);
 
           return (
             <React.Fragment key={step}>
@@ -118,7 +123,7 @@ const ProposalPipelineView: React.FC<ProposalPipelineViewProps> = ({
                 type="button"
                 className={[
                   'proposal-step',
-                  isActive ? 'proposal-step-active' : '',
+                  isInProgress ? 'proposal-step-active' : '',
                   isSelected ? 'proposal-step-selected' : '',
                   completed ? 'proposal-step-completed' : '',
                   reached ? 'proposal-step-reached' : '',
@@ -127,7 +132,14 @@ const ProposalPipelineView: React.FC<ProposalPipelineViewProps> = ({
               >
                 <span className="proposal-step-icon">
                   <StepIcon step={step} />
-                  {isActive && isRunning && <span className="proposal-step-pulse" />}
+                  {isInProgress && <span className="proposal-step-spinner" />}
+                  {completed && !isInProgress && (
+                    <span className="proposal-step-check">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    </span>
+                  )}
                 </span>
                 <span className="proposal-step-label">{PROPOSAL_STEP_LABELS[step]}</span>
               </button>

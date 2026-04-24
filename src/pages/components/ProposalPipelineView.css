@@ -61,8 +61,8 @@
 }
 
 .proposal-step-completed {
-  border-color: #222222;
-  background: #f0f0f0;
+  border-color: #2e7d32;
+  background: #f1f8f1;
 }
 
 .proposal-step-active {
@@ -84,17 +84,43 @@
   color: #111111;
 }
 
-.proposal-step-pulse {
+/* ─── Spinner ring for in-progress steps ───────────────────── */
+
+.proposal-step-spinner {
   position: absolute;
-  inset: -6px;
+  inset: -8px;
   border-radius: 50%;
-  border: 2px solid #0078d4;
-  animation: proposal-step-pulse 1.5s ease-in-out infinite;
+  border: 2.5px solid rgba(0, 120, 212, 0.2);
+  border-top-color: #0078d4;
+  animation: proposal-spin 0.8s linear infinite;
 }
 
-@keyframes proposal-step-pulse {
-  0%, 100% { opacity: 0.3; transform: scale(0.8); }
-  50% { opacity: 1; transform: scale(1.2); }
+@keyframes proposal-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ─── Green checkmark for completed steps ──────────────────── */
+
+.proposal-step-check {
+  position: absolute;
+  bottom: -4px;
+  right: -6px;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #2e7d32;
+  border-radius: 50%;
+  color: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  animation: proposal-check-pop 0.3s ease;
+}
+
+@keyframes proposal-check-pop {
+  0% { transform: scale(0); }
+  60% { transform: scale(1.2); }
+  100% { transform: scale(1); }
 }
 
 .proposal-step-label {

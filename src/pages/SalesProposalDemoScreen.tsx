@@ -26,6 +26,7 @@ const SalesProposalDemoScreen: React.FC = () => {
   // ─── Orchestration state ──────────────────────────────────────────────────
   const [isRunning, setIsRunning] = useState(false);
   const [activeStep, setActiveStep] = useState<ProposalStep | null>(null);
+  const [inProgressSteps, setInProgressSteps] = useState<Set<ProposalStep>>(new Set());
   const [selectedStep, setSelectedStep] = useState<ProposalStep | null>(null);
   const [events, setEvents] = useState<ProposalEvent[]>([]);
   const [agentMessages, setAgentMessages] = useState<ProposalAgentMessage[]>([]);
@@ -43,6 +44,7 @@ const SalesProposalDemoScreen: React.FC = () => {
 
     setIsRunning(true);
     setActiveStep('user-request');
+    setInProgressSteps(new Set(['user-request']));
     setSelectedStep(null);
     setEvents([]);
     setAgentMessages([]);
@@ -64,14 +66,16 @@ const SalesProposalDemoScreen: React.FC = () => {
 
         if (event.type === 'step-start') {
           setActiveStep(event.step);
-        }
-
-        if (event.type === 'agent-message') {
-          const msg = event.data as ProposalAgentMessage;
-          setAgentMessages((prev) => [...prev, msg]);
+          setInProgressSteps((prev) => new Set(prev).add(event.step));
         }
 
         if (event.type === 'step-complete') {
+          setInProgressSteps((prev) => {
+            const next = new Set(prev);
+            next.delete(event.step);
+            return next;
+          });
+
           switch (event.step) {
             case 'customer-intake':
               setRequirements(event.data as CustomerRequirements);
@@ -91,9 +95,15 @@ const SalesProposalDemoScreen: React.FC = () => {
           }
         }
 
+        if (event.type === 'agent-message') {
+          const msg = event.data as ProposalAgentMessage;
+          setAgentMessages((prev) => [...prev, msg]);
+        }
+
         if (event.type === 'run-complete') {
           setSummary(event.data as ProposalSummary);
           setActiveStep('final-proposal');
+          setInProgressSteps(new Set());
           setIsRunning(false);
         }
 
@@ -101,12 +111,14 @@ const SalesProposalDemoScreen: React.FC = () => {
           const errData = event.data as { message: string };
           setError(errData.message);
           setIsRunning(false);
+          setInProgressSteps(new Set());
           setActiveStep(null);
         }
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Sales Proposal failed');
       setIsRunning(false);
+      setInProgressSteps(new Set());
       setActiveStep(null);
     }
   }, [prompt, creativityLevel, isRunning]);
@@ -182,6 +194,7 @@ const SalesProposalDemoScreen: React.FC = () => {
           onSelectStep={setSelectedStep}
           isRunning={isRunning}
           events={events}
+          inProgressSteps={inProgressSteps}
         />
 
         {/* Agent Communication */}
