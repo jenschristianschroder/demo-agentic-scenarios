@@ -45,7 +45,7 @@ export interface AgentMessage {
   to: AgentStep;
   message: string;
   timestamp: string;
-  type: 'finding' | 'instruction' | 'confirmation';
+  type: 'finding' | 'instruction' | 'confirmation' | 'handoff';
 }
 
 /** Revision agent output */

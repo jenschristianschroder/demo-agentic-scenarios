@@ -12,6 +12,7 @@ const typeIcons: Record<AgentMessage['type'], string> = {
   finding: '🔍',
   instruction: '🤖',
   confirmation: '✅',
+  handoff: '➡️',
 };
 
 const AgentCommunicationLog: React.FC<AgentCommunicationLogProps> = ({ messages, isRunning }) => {

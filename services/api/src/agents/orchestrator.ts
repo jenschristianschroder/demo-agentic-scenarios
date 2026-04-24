@@ -207,7 +207,8 @@ function sendAgentMessage(
 /**
  * Run the RAG Failure & Recovery orchestration workflow.
  * Generator → Fact-Checker → Revision Agent → re-verify loop.
- * Emits visible inter-agent communication messages.
+ * Emits visible inter-agent communication messages showing the full
+ * delegation chain between agents.
  */
 export async function runRagFailureOrchestrator(
   request: OrchestrationRequest,
@@ -246,6 +247,19 @@ export async function runRagFailureOrchestrator(
 
   while (currentIteration <= maxIterations && !approved) {
     const iterationMessages: AgentMessage[] = [];
+
+    // ── Orchestrator assigns task to Generator ─────────────────────────
+    const assignMsg: AgentMessage = {
+      from: 'orchestrator',
+      to: 'generator',
+      message: currentIteration === 1
+        ? `Generate a product page for the Contoso AirBook S5 based on the user's prompt. Extract all factual claims for verification.`
+        : `Re-extract factual claims from the revised draft and prepare them for re-verification.`,
+      timestamp: now(),
+      type: 'instruction',
+    };
+    iterationMessages.push(assignMsg);
+    sendAgentMessage(res, assignMsg);
 
     // ── Generate ───────────────────────────────────────────────────────
     sendEvent(res, {
@@ -288,6 +302,19 @@ export async function runRagFailureOrchestrator(
       data: lastGeneratorOutput,
     });
 
+    // ── Generator hands off to Fact Checker ────────────────────────────
+    const handoffToFcMsg: AgentMessage = {
+      from: 'generator',
+      to: 'fact-checker',
+      message: currentIteration === 1
+        ? `Draft complete with ${lastGeneratorOutput.claims.length} factual claims extracted. Sending for fact-check verification.`
+        : `Re-extracted ${lastGeneratorOutput.claims.length} claims from revised draft. Sending for re-verification.`,
+      timestamp: now(),
+      type: 'handoff',
+    };
+    iterationMessages.push(handoffToFcMsg);
+    sendAgentMessage(res, handoffToFcMsg);
+
     // ── Fact-check ─────────────────────────────────────────────────────
     sendEvent(res, {
       type: 'step-start',
@@ -308,18 +335,35 @@ export async function runRagFailureOrchestrator(
       data: lastFactCheckerOutput,
     });
 
-    // ── Emit inter-agent messages for unsupported claims ────────────────
+    // ── Fact Checker reports findings to Orchestrator ───────────────────
     const unsupportedClaims = lastFactCheckerOutput.claims.filter(c => c.status === 'unsupported');
-    for (const claim of unsupportedClaims) {
+    const supportedCount = lastFactCheckerOutput.claims.filter(c => c.status === 'supported').length;
+
+    if (unsupportedClaims.length > 0) {
+      // Consolidate all unsupported claims into a single finding message
+      const claimDetails = unsupportedClaims
+        .map((c, i) => `(${i + 1}) "${c.text}" — ${c.evidence ?? 'No matching catalog entry'}`)
+        .join(' ');
       const findingMsg: AgentMessage = {
         from: 'fact-checker',
         to: 'orchestrator',
-        message: `Unsupported claim: "${claim.text}" — Evidence: ${claim.evidence ?? 'No matching catalog entry'}`,
+        message: `Found ${unsupportedClaims.length} unsupported claim${unsupportedClaims.length > 1 ? 's' : ''}: ${claimDetails}`,
         timestamp: now(),
         type: 'finding',
       };
       iterationMessages.push(findingMsg);
       sendAgentMessage(res, findingMsg);
+    } else {
+      // All claims verified — emit confirmation
+      const confirmMsg: AgentMessage = {
+        from: 'fact-checker',
+        to: 'orchestrator',
+        message: `All ${supportedCount} claims verified against the product catalog. Score: ${(lastFactCheckerOutput.score * 100).toFixed(0)}%. Draft is now fully grounded.`,
+        timestamp: now(),
+        type: 'confirmation',
+      };
+      iterationMessages.push(confirmMsg);
+      sendAgentMessage(res, confirmMsg);
     }
 
     // ── Evaluate result ────────────────────────────────────────────────
@@ -342,21 +386,8 @@ export async function runRagFailureOrchestrator(
 
     if (decision.action === 'approve') {
       approved = true;
-
-      // Emit confirmation message
-      if (currentIteration > 1) {
-        const confirmMsg: AgentMessage = {
-          from: 'generator',
-          to: 'fact-checker',
-          message: `Revised draft now says: ${lastGeneratorOutput.claims.filter(c => c.status === 'supported').map(c => c.text).join(', ')}`,
-          timestamp: now(),
-          type: 'confirmation',
-        };
-        iterationMessages.push(confirmMsg);
-        sendAgentMessage(res, confirmMsg);
-      }
     } else if (decision.action === 'revise') {
-      // ── Emit instruction message ─────────────────────────────────────
+      // ── Orchestrator instructs Revision Agent ────────────────────────
       const instructionMsg: AgentMessage = {
         from: 'orchestrator',
         to: 'revision',
@@ -394,6 +425,20 @@ export async function runRagFailureOrchestrator(
         timestamp: now(),
         data: revisionOutput,
       });
+
+      // ── Revision Agent hands off to Generator ────────────────────────
+      const changesPreview = revisionOutput.changesApplied.length > 0
+        ? ` Changes: ${revisionOutput.changesApplied.join('; ')}.`
+        : '';
+      const revisionHandoffMsg: AgentMessage = {
+        from: 'revision',
+        to: 'generator',
+        message: `Revised draft ready.${changesPreview} Sending for claim re-extraction and re-verification.`,
+        timestamp: now(),
+        type: 'handoff',
+      };
+      iterationMessages.push(revisionHandoffMsg);
+      sendAgentMessage(res, revisionHandoffMsg);
 
       // Update current draft text for next iteration
       currentDraftText = revisionOutput.revisedText;

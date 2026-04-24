@@ -77,6 +77,11 @@
   background: #f0faf0;
 }
 
+.agent-comm-handoff {
+  border-left-color: #7b1fa2;
+  background: #f9f0ff;
+}
+
 .agent-comm-bubble-header {
   display: flex;
   align-items: center;
@@ -117,6 +122,11 @@
 .agent-comm-type-confirmation {
   color: #1b5e20;
   background: #e8f5e9;
+}
+
+.agent-comm-type-handoff {
+  color: #4a148c;
+  background: #f3e5f5;
 }
 
 .agent-comm-bubble-body {
