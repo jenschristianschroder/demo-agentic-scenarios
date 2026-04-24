@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import ReactMarkdown from 'react-markdown';
 import type {
   ProposalRequest,
   ProposalEvent,
@@ -280,9 +281,7 @@ const SalesProposalDemoScreen: React.FC = () => {
             )}
 
             <div className="proposal-text">
-              {summary.proposalText.split('\n').map((line, i) => (
-                <p key={i}>{line}</p>
-              ))}
+              <ReactMarkdown>{summary.proposalText}</ReactMarkdown>
             </div>
           </div>
         )}
@@ -410,9 +409,7 @@ const StepDetailPanel: React.FC<{
         <div className="step-detail-card">
           <h3>{step === 'proposal-draft' ? 'Draft Proposal' : 'Final Proposal'}</h3>
           <div className="proposal-text-preview">
-            {summary.proposalText.split('\n').map((line, i) => (
-              <p key={i}>{line}</p>
-            ))}
+            <ReactMarkdown>{summary.proposalText}</ReactMarkdown>
           </div>
         </div>
       );

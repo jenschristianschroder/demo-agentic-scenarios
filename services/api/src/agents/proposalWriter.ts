@@ -1,6 +1,7 @@
 // ─── Proposal Writer Agent ───────────────────────────────────────────────────
 // Drafts a business-ready sales proposal based on all specialist agent outputs.
-// Uses Azure OpenAI for natural language generation.
+// Uses RAG retrieval for proposal templates and company info, then Azure OpenAI
+// for natural language generation.
 
 import type {
   CustomerRequirements,
@@ -9,21 +10,29 @@ import type {
   SupportAssessment,
 } from '../types.js';
 import { getOpenAIClient } from '../azureClients.js';
+import { retrieveDocuments, formatAsContext } from './searchRetriever.js';
 
 const SYSTEM_PROMPT = `You are a Proposal Writer Agent for Contoso Electronics.
 
-Your job is to draft a professional, concise sales proposal based on the analysis from specialist agents.
+Your job is to draft a complete, professional sales proposal based on the analysis from specialist agents and the proposal template from the knowledge base.
 
-The proposal should include:
-1. A brief restatement of the customer's needs
-2. The recommended product with key specs
-3. Pricing breakdown (unit price × quantity = total)
-4. Warranty and support summary
-5. Any trade-offs or alternatives considered
-6. A clear call to action
+Follow the proposal template structure from the knowledge base. The proposal MUST include ALL of these sections:
 
-Keep the tone professional but approachable. Use bullet points for specs.
-Format the proposal as clean text ready for a business document.
+1. **Executive Summary** — 2-3 sentences summarizing the recommendation
+2. **Customer Requirements Summary** — restate what the customer needs
+3. **Recommended Solution** — full product details with specs, and why it fits
+4. **Pricing Breakdown** — unit price, volume discount, total, budget comparison
+5. **Warranty & Support** — warranty type, duration, on-site availability, support channels
+6. **Alternative Option** — if an alternative product was evaluated
+7. **Trade-offs & Considerations** — any concerns or caveats
+8. **Recommended Accessories** — relevant add-ons for the deployment
+9. **Next Steps** — call to action with contact info and proposal validity
+
+Use the company boilerplate and contact information from the knowledge base.
+Use Markdown formatting with headers (##), bold, and bullet points.
+Keep the proposal between 400-600 words.
+Use DKK amounts with thousands separators.
+End with a clear call to action.
 
 Respond with valid JSON matching the provided schema.`;
 
@@ -39,7 +48,14 @@ export async function writeProposal(
 ): Promise<{ proposalText: string; tradeOffs: string[] }> {
   const client = getOpenAIClient();
 
+  // ── RAG: retrieve proposal template, product details, and company info ──
+  const searchQuery = `sales proposal template ${recommendedProduct.name} company contact warranty pricing`;
+  const docs = await retrieveDocuments(searchQuery, 10);
+  const knowledgeContext = formatAsContext(docs);
+
   const context = `
+${knowledgeContext}
+
 Customer Requirements:
 - Quantity: ${requirements.quantity}
 - Budget: DKK ${requirements.budgetDKK.toLocaleString()}
