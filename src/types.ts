@@ -121,7 +121,7 @@ export const STEP_LABELS: Record<AgentStep, string> = {
 
 // ─── Scenario / Features definitions ─────────────────────────────────────────
 
-export type ScenarioId = 'multi-agent-orchestration' | 'rag-pipeline' | 'tool-use' | 'rag-failure-recovery';
+export type ScenarioId = 'multi-agent-orchestration' | 'rag-pipeline' | 'tool-use' | 'rag-failure-recovery' | 'sales-proposal';
 
 export interface ScenarioInfo {
   id: ScenarioId;
@@ -163,6 +163,14 @@ export const SCENARIOS: ScenarioInfo[] = [
       'Watch the system detect hallucinated product claims, retrieve real catalog facts, and rewrite until grounded',
     icon: '🔍',
     route: '/rag-failure-demo',
+  },
+  {
+    id: 'sales-proposal',
+    label: 'Sales Proposal Team',
+    description:
+      'Specialized agents collaborate to build a business laptop proposal — balancing budget, specs, warranty, and support constraints',
+    icon: '📋',
+    route: '/sales-proposal-demo',
   },
 ];
 
@@ -241,6 +249,128 @@ export interface ToolEvent {
 }
 
 export interface ToolRequest {
+  prompt: string;
+  creativityLevel: number;
+}
+
+// ─── Sales Proposal Team Contracts ───────────────────────────────────────────
+
+export type ProposalAgentRole =
+  | 'orchestrator'
+  | 'customer-intake'
+  | 'product-specialist'
+  | 'pricing'
+  | 'support-warranty'
+  | 'proposal-writer';
+
+export const PROPOSAL_AGENT_LABELS: Record<ProposalAgentRole, string> = {
+  orchestrator: 'Orchestrator',
+  'customer-intake': 'Customer Intake',
+  'product-specialist': 'Product Specialist',
+  pricing: 'Pricing Agent',
+  'support-warranty': 'Support & Warranty',
+  'proposal-writer': 'Proposal Writer',
+};
+
+export type ProposalStep =
+  | 'user-request'
+  | 'customer-intake'
+  | 'product-search'
+  | 'pricing'
+  | 'support-check'
+  | 'proposal-draft'
+  | 'final-proposal';
+
+export const PROPOSAL_STEP_LABELS: Record<ProposalStep, string> = {
+  'user-request': 'Customer Request',
+  'customer-intake': 'Intake',
+  'product-search': 'Product Search',
+  pricing: 'Pricing',
+  'support-check': 'Support Check',
+  'proposal-draft': 'Proposal Draft',
+  'final-proposal': 'Final Proposal',
+};
+
+export interface CustomerRequirements {
+  quantity: number;
+  budgetDKK: number;
+  useCase: string;
+  priorities: string[];
+  warrantyNeeds: string;
+  additionalNotes: string;
+}
+
+export interface ProductCandidate {
+  name: string;
+  category: string;
+  priceDKK: number;
+  keySpecs: string;
+  batteryLife: string;
+  weight: string;
+  warranty: string;
+  fitScore: number;
+  fitReason: string;
+}
+
+export interface PricingResult {
+  productName: string;
+  unitPriceDKK: number;
+  quantity: number;
+  totalDKK: number;
+  budgetDKK: number;
+  withinBudget: boolean;
+  budgetDelta: number;
+  accessories?: string;
+}
+
+export interface SupportAssessment {
+  productName: string;
+  warrantyType: string;
+  warrantyDuration: string;
+  businessSupport: boolean;
+  onsiteService: boolean;
+  replacementTerms: string;
+  suitability: 'recommended' | 'acceptable' | 'not-recommended';
+  concerns: string[];
+}
+
+export interface ProposalAgentMessage {
+  from: ProposalAgentRole | 'user';
+  to: ProposalAgentRole;
+  message: string;
+  timestamp: string;
+  type: 'instruction' | 'finding' | 'concern' | 'recommendation' | 'handoff';
+}
+
+export interface ProposalEvent {
+  type: 'step-start' | 'step-complete' | 'agent-message' | 'run-complete' | 'error';
+  step: ProposalStep;
+  timestamp: string;
+  data:
+    | CustomerRequirements
+    | ProductCandidate[]
+    | PricingResult
+    | SupportAssessment
+    | ProposalAgentMessage
+    | { text: string }
+    | { message: string }
+    | ProposalSummary
+    | null;
+}
+
+export interface ProposalSummary {
+  recommendedProduct: string;
+  alternativeProduct?: string;
+  totalCost: number;
+  budgetDKK: number;
+  withinBudget: boolean;
+  warrantyOk: boolean;
+  proposalText: string;
+  tradeOffs: string[];
+  agentMessages: ProposalAgentMessage[];
+}
+
+export interface ProposalRequest {
   prompt: string;
   creativityLevel: number;
 }

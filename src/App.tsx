@@ -6,6 +6,7 @@ import DemoScreen from './pages/DemoScreen';
 import RagDemoScreen from './pages/RagDemoScreen';
 import ToolDemoScreen from './pages/ToolDemoScreen';
 import RagFailureDemoScreen from './pages/RagFailureDemoScreen';
+import SalesProposalDemoScreen from './pages/SalesProposalDemoScreen';
 
 const App: React.FC = () => {
   return (
@@ -16,6 +17,7 @@ const App: React.FC = () => {
       <Route path="/rag-demo" element={<RagDemoScreen />} />
       <Route path="/rag-failure-demo" element={<RagFailureDemoScreen />} />
       <Route path="/tool-demo" element={<ToolDemoScreen />} />
+      <Route path="/sales-proposal-demo" element={<SalesProposalDemoScreen />} />
     </Routes>
   );
 };
