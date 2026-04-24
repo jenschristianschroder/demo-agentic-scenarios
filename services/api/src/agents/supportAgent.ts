@@ -1,80 +1,80 @@
 // ─── Support & Warranty Agent ────────────────────────────────────────────────
 // Assesses whether a product's warranty and support terms are suitable
-// for a business deployment. Deterministic — uses catalog data directly.
+// for a business deployment. Uses RAG retrieval + LLM evaluation.
 
 import type { SupportAssessment } from '../types.js';
-import { findProduct } from '../tools/productCatalog.js';
+import { getOpenAIClient } from '../azureClients.js';
+import { retrieveDocuments, formatAsContext } from './searchRetriever.js';
+
+const SYSTEM_PROMPT = `You are a Support & Warranty Agent for Contoso Electronics.
+
+Your job is to assess whether a product's warranty and support terms are suitable for a business deployment, based on the warranty and support documentation from the knowledge base.
+
+For the given product, evaluate:
+- Warranty type and duration
+- Whether on-site service is included
+- Whether accidental damage protection is available
+- Business support availability (priority phone, dedicated account manager)
+- Replacement / repair turnaround times
+- Whether the product ships with a business OS (Windows 11 Pro preferred)
+- Any concerns that would affect a business deployment
+
+Suitability ratings:
+- "recommended" — on-site warranty, business OS, 3+ year coverage
+- "acceptable" — some business support or 2+ year coverage but with caveats
+- "not-recommended" — consumer-grade warranty, no on-site service, short coverage
+
+Respond with valid JSON matching the provided schema.`;
 
 /**
  * Assess the support and warranty suitability of a product for business use.
  */
-export function assessSupport(productName: string): SupportAssessment {
-  const product = findProduct(productName);
-  if (!product) {
-    return {
-      productName,
-      warrantyType: 'Unknown',
-      warrantyDuration: 'Unknown',
-      businessSupport: false,
-      onsiteService: false,
-      replacementTerms: 'Unknown',
-      suitability: 'not-recommended',
-      concerns: ['Product not found in catalog'],
-    };
-  }
+export async function assessSupport(productName: string): Promise<SupportAssessment> {
+  const client = getOpenAIClient();
 
-  const warranty = product.warranty.toLowerCase();
-  const onsiteService = warranty.includes('on-site');
-  const hasAccidentalDamage = warranty.includes('accidental damage');
-  const businessSupport = onsiteService || product.os.includes('Pro');
-  const concerns: string[] = [];
+  // ── RAG: retrieve warranty and support information ─────────────────────
+  const searchQuery = `${productName} warranty support service business`;
+  const docs = await retrieveDocuments(searchQuery, 10);
+  const knowledgeContext = formatAsContext(docs);
 
-  // Parse warranty duration
-  const durationMatch = product.warranty.match(/(\d+)\s*year/);
-  const durationYears = durationMatch ? parseInt(durationMatch[1], 10) : 1;
+  const userMessage = `Product to assess: "${productName}"
+${knowledgeContext}
 
-  // Determine replacement terms
-  let replacementTerms: string;
-  if (warranty.includes('next-business-day')) {
-    replacementTerms = 'Next-business-day replacement';
-  } else if (onsiteService) {
-    replacementTerms = 'On-site repair within 2 business days';
-  } else {
-    replacementTerms = 'Carry-in repair, 5 business days average turnaround';
-  }
+Based on the knowledge base documents above, assess the warranty and support suitability of "${productName}" for a business deployment. Return the assessment as JSON.`;
 
-  // Build concerns
-  if (!onsiteService) {
-    concerns.push('No on-site service — carry-in only');
-  }
-  if (!product.os.includes('Pro')) {
-    concerns.push(`Ships with ${product.os} — not Windows 11 Pro`);
-  }
-  if (durationYears < 3) {
-    concerns.push(`Only ${durationYears}-year warranty — below typical 3-year business standard`);
-  }
-  if (warranty.includes('carry-in') && !warranty.includes('on-site')) {
-    concerns.push('Carry-in warranty requires shipping device — field sales downtime risk');
-  }
+  const response = await client.chat.completions.create({
+    model: process.env.AZURE_OPENAI_DEPLOYMENT || 'gpt-4o',
+    temperature: 0.1,
+    messages: [
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user', content: userMessage },
+    ],
+    response_format: {
+      type: 'json_schema',
+      json_schema: {
+        name: 'support_assessment',
+        strict: true,
+        schema: {
+          type: 'object',
+          properties: {
+            productName: { type: 'string' },
+            warrantyType: { type: 'string' },
+            warrantyDuration: { type: 'string' },
+            businessSupport: { type: 'boolean' },
+            onsiteService: { type: 'boolean' },
+            replacementTerms: { type: 'string' },
+            suitability: { type: 'string', enum: ['recommended', 'acceptable', 'not-recommended'] },
+            concerns: { type: 'array', items: { type: 'string' } },
+          },
+          required: ['productName', 'warrantyType', 'warrantyDuration', 'businessSupport', 'onsiteService', 'replacementTerms', 'suitability', 'concerns'],
+          additionalProperties: false,
+        },
+      },
+    },
+  });
 
-  // Determine suitability
-  let suitability: SupportAssessment['suitability'];
-  if (onsiteService && businessSupport && durationYears >= 3) {
-    suitability = 'recommended';
-  } else if (businessSupport || durationYears >= 2) {
-    suitability = 'acceptable';
-  } else {
-    suitability = 'not-recommended';
-  }
+  const content = response.choices[0]?.message?.content;
+  if (!content) throw new Error('Support Agent received empty response');
 
-  return {
-    productName: product.name,
-    warrantyType: hasAccidentalDamage ? 'On-site with accidental damage protection' : product.warranty,
-    warrantyDuration: `${durationYears} year${durationYears > 1 ? 's' : ''}`,
-    businessSupport,
-    onsiteService,
-    replacementTerms,
-    suitability,
-    concerns,
-  };
+  return JSON.parse(content) as SupportAssessment;
 }

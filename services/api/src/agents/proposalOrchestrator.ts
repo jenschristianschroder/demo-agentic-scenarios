@@ -176,10 +176,10 @@ export async function runProposalOrchestrator(
       data: null,
     });
 
-    const support: SupportAssessment = assessSupport(recommended.name);
+    const support: SupportAssessment = await assessSupport(recommended.name);
     let altSupport: SupportAssessment | undefined;
     if (alternative) {
-      altSupport = assessSupport(alternative.name);
+      altSupport = await assessSupport(alternative.name);
     }
 
     sendEvent(res, {
