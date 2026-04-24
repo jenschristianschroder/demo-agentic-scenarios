@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import type {
   ProposalRequest,
   ProposalEvent,
@@ -17,6 +17,9 @@ import './SalesProposalDemoScreen.css';
 
 const DEFAULT_PROMPT =
   'We need 25 laptops for field sales, under DKK 300,000, with long battery life and business support.';
+
+/** Minimum time (ms) a step's spinner stays visible so fast agents are observable. */
+const MIN_SPINNER_MS = 2000;
 
 const SalesProposalDemoScreen: React.FC = () => {
   // ─── Controls state ───────────────────────────────────────────────────────
@@ -39,12 +42,31 @@ const SalesProposalDemoScreen: React.FC = () => {
   const [support, setSupport] = useState<SupportAssessment | null>(null);
   const [summary, setSummary] = useState<ProposalSummary | null>(null);
 
+  /** Track when each step's spinner started so we can enforce MIN_SPINNER_MS. */
+  const stepStartTimes = useRef<Map<ProposalStep, number>>(new Map());
+
+  /** Remove a step from inProgressSteps after the minimum spinner time. */
+  const finishStep = useCallback((step: ProposalStep) => {
+    const startedAt = stepStartTimes.current.get(step) ?? Date.now();
+    const elapsed = Date.now() - startedAt;
+    const remaining = Math.max(0, MIN_SPINNER_MS - elapsed);
+
+    setTimeout(() => {
+      setInProgressSteps((prev) => {
+        const next = new Set(prev);
+        next.delete(step);
+        return next;
+      });
+    }, remaining);
+  }, []);
+
   const handleRun = useCallback(async () => {
     if (!prompt.trim() || isRunning) return;
 
     setIsRunning(true);
     setActiveStep('user-request');
     setInProgressSteps(new Set(['user-request']));
+    stepStartTimes.current = new Map([['user-request', Date.now()]]);
     setSelectedStep(null);
     setEvents([]);
     setAgentMessages([]);
@@ -66,15 +88,12 @@ const SalesProposalDemoScreen: React.FC = () => {
 
         if (event.type === 'step-start') {
           setActiveStep(event.step);
+          stepStartTimes.current.set(event.step, Date.now());
           setInProgressSteps((prev) => new Set(prev).add(event.step));
         }
 
         if (event.type === 'step-complete') {
-          setInProgressSteps((prev) => {
-            const next = new Set(prev);
-            next.delete(event.step);
-            return next;
-          });
+          finishStep(event.step);
 
           switch (event.step) {
             case 'customer-intake':
@@ -103,7 +122,22 @@ const SalesProposalDemoScreen: React.FC = () => {
         if (event.type === 'run-complete') {
           setSummary(event.data as ProposalSummary);
           setActiveStep('final-proposal');
-          setInProgressSteps(new Set());
+          // Let any remaining spinners finish their minimum display time
+          const now = Date.now();
+          setInProgressSteps((prev) => {
+            for (const step of prev) {
+              const startedAt = stepStartTimes.current.get(step) ?? now;
+              const remaining = Math.max(0, MIN_SPINNER_MS - (now - startedAt));
+              setTimeout(() => {
+                setInProgressSteps((p) => {
+                  const next = new Set(p);
+                  next.delete(step);
+                  return next;
+                });
+              }, remaining);
+            }
+            return prev;
+          });
           setIsRunning(false);
         }
 
@@ -121,7 +155,7 @@ const SalesProposalDemoScreen: React.FC = () => {
       setInProgressSteps(new Set());
       setActiveStep(null);
     }
-  }, [prompt, creativityLevel, isRunning]);
+  }, [prompt, creativityLevel, isRunning, finishStep]);
 
   return (
     <div className="sales-proposal-screen">
