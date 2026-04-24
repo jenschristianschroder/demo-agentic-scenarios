@@ -133,14 +133,14 @@ export async function runProposalOrchestrator(
       data: null,
     });
 
-    const pricing: PricingResult = calculatePricing(
+    const pricing: PricingResult = await calculatePricing(
       recommended.name,
       requirements.quantity,
       requirements.budgetDKK
     );
     let altPricing: PricingResult | undefined;
     if (alternative) {
-      altPricing = calculatePricing(alternative.name, requirements.quantity, requirements.budgetDKK);
+      altPricing = await calculatePricing(alternative.name, requirements.quantity, requirements.budgetDKK);
     }
 
     sendEvent(res, {
