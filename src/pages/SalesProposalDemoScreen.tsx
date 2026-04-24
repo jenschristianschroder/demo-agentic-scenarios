@@ -18,8 +18,12 @@ import './SalesProposalDemoScreen.css';
 const DEFAULT_PROMPT =
   'We need 25 laptops for field sales, under DKK 300,000, with long battery life and business support.';
 
-/** Minimum time (ms) a step's spinner stays visible so fast agents are observable. */
-const MIN_SPINNER_MS = 2000;
+/** Random spinner duration range (ms) so fast agents look natural. */
+const MIN_SPINNER_MS = 500;
+const MAX_SPINNER_MS = 2000;
+function randomSpinnerMs() {
+  return MIN_SPINNER_MS + Math.random() * (MAX_SPINNER_MS - MIN_SPINNER_MS);
+}
 
 const SalesProposalDemoScreen: React.FC = () => {
   // ─── Controls state ───────────────────────────────────────────────────────
@@ -53,8 +57,9 @@ const SalesProposalDemoScreen: React.FC = () => {
   /** Guards against stale timers from a previous run. */
   const runGeneration = useRef(0);
 
-  /** Track when each step's spinner visually started (for spinner removal). */
+  /** Track when each step's spinner visually started and its assigned duration. */
   const stepStartTimes = useRef<Map<ProposalStep, number>>(new Map());
+  const stepDurations = useRef<Map<ProposalStep, number>>(new Map());
 
   const handleRun = useCallback(async () => {
     if (!prompt.trim() || isRunning) return;
@@ -67,6 +72,7 @@ const SalesProposalDemoScreen: React.FC = () => {
     setActiveStep(null);
     setInProgressSteps(new Set());
     stepStartTimes.current = new Map();
+    stepDurations.current = new Map();
     visualTimeline.current = Date.now();
     setSelectedStep(null);
     setEvents([]);
@@ -100,8 +106,10 @@ const SalesProposalDemoScreen: React.FC = () => {
 
         // ── step-start: cascade fast steps along the visual timeline ─────
         if (event.type === 'step-start') {
+          const duration = randomSpinnerMs();
+          stepDurations.current.set(event.step, duration);
           const visualStart = Math.max(visualTimeline.current, now);
-          visualTimeline.current = visualStart + MIN_SPINNER_MS;
+          visualTimeline.current = visualStart + duration;
           const delay = visualStart - now;
 
           schedule(delay, () => {
@@ -118,10 +126,11 @@ const SalesProposalDemoScreen: React.FC = () => {
           const delay = Math.max(0, visualTimeline.current - now);
 
           schedule(delay, () => {
-            // Remove spinner after MIN_SPINNER_MS from its visual start
+            // Remove spinner after the step's assigned duration from visual start
             const startedAt = stepStartTimes.current.get(event.step) ?? Date.now();
+            const dur = stepDurations.current.get(event.step) ?? MIN_SPINNER_MS;
             const elapsed = Date.now() - startedAt;
-            const remaining = Math.max(0, MIN_SPINNER_MS - elapsed);
+            const remaining = Math.max(0, dur - elapsed);
             if (remaining <= 0) {
               setInProgressSteps((prev) => {
                 const next = new Set(prev);
