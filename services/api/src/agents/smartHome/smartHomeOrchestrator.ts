@@ -13,12 +13,12 @@ import type {
   DeviceRecommendation,
   PrivacyAssessment,
   CompatibilityResult,
-} from '../types.js';
-import { analyzeNeeds } from './smartHome/needsAgent.js';
-import { recommendDevices } from './smartHome/deviceAgent.js';
-import { reviewPrivacy } from './smartHome/privacyAgent.js';
-import { checkCompatibility } from './smartHome/compatibilityAgent.js';
-import { assembleBundle } from './smartHome/bundleAgent.js';
+} from '../../types.js';
+import { analyzeNeeds } from './needsAgent.js';
+import { recommendDevices } from './deviceAgent.js';
+import { reviewPrivacy } from './privacyAgent.js';
+import { checkCompatibility } from './compatibilityAgent.js';
+import { assembleBundle } from './bundleAgent.js';
 
 export async function runSmartHomeOrchestrator(
   request: SmartHomeRequest,

@@ -2,8 +2,8 @@
 // Identifies apartment size, privacy constraints, budget, and priorities
 // from the customer's natural-language request. Uses LLM + structured output.
 
-import type { HomeNeeds } from '../types.js';
-import { getOpenAIClient } from '../azureClients.js';
+import type { HomeNeeds } from '../../types.js';
+import { getOpenAIClient } from '../../azureClients.js';
 
 const SYSTEM_PROMPT = `You are a Needs Agent for Contoso Electronics Smart Home division.
 

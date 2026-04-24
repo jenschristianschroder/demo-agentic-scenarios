@@ -1,9 +1,9 @@
 // ─── Device Agent ────────────────────────────────────────────────────────────
 // Recommends smart home devices based on customer needs using RAG + LLM.
 
-import type { HomeNeeds, DeviceRecommendation } from '../types.js';
-import { getOpenAIClient } from '../azureClients.js';
-import { retrieveDocuments, formatAsContext } from './searchRetriever.js';
+import type { HomeNeeds, DeviceRecommendation } from '../../types.js';
+import { getOpenAIClient } from '../../azureClients.js';
+import { retrieveDocuments, formatAsContext } from '../searchRetriever.js';
 
 const SYSTEM_PROMPT = `You are a Device Agent for Contoso Electronics Smart Home division.
 

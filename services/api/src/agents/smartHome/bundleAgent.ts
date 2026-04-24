@@ -8,9 +8,9 @@ import type {
   CompatibilityResult,
   SmartHomeBundleSummary,
   SmartHomeAgentMessage,
-} from '../types.js';
-import { getOpenAIClient } from '../azureClients.js';
-import { retrieveDocuments, formatAsContext } from './searchRetriever.js';
+} from '../../types.js';
+import { getOpenAIClient } from '../../azureClients.js';
+import { retrieveDocuments, formatAsContext } from '../searchRetriever.js';
 
 const SYSTEM_PROMPT = `You are a Bundle Agent for Contoso Electronics Smart Home division.
 

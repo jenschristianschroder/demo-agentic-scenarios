@@ -1,9 +1,9 @@
 // ─── Compatibility Agent ─────────────────────────────────────────────────────
 // Checks protocol compatibility between all recommended devices using RAG + LLM.
 
-import type { DeviceRecommendation, CompatibilityResult } from '../types.js';
-import { getOpenAIClient } from '../azureClients.js';
-import { retrieveDocuments, formatAsContext } from './searchRetriever.js';
+import type { DeviceRecommendation, CompatibilityResult } from '../../types.js';
+import { getOpenAIClient } from '../../azureClients.js';
+import { retrieveDocuments, formatAsContext } from '../searchRetriever.js';
 
 const SYSTEM_PROMPT = `You are a Compatibility Agent for Contoso Electronics Smart Home division.
 

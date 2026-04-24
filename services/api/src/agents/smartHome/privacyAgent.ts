@@ -2,9 +2,9 @@
 // Reviews each recommended device for privacy and safety concerns using RAG + LLM.
 // Can approve, conditionally approve, or reject devices.
 
-import type { DeviceRecommendation, PrivacyAssessment } from '../types.js';
-import { getOpenAIClient } from '../azureClients.js';
-import { retrieveDocuments, formatAsContext } from './searchRetriever.js';
+import type { DeviceRecommendation, PrivacyAssessment } from '../../types.js';
+import { getOpenAIClient } from '../../azureClients.js';
+import { retrieveDocuments, formatAsContext } from '../searchRetriever.js';
 
 const SYSTEM_PROMPT = `You are a Privacy/Safety Agent for Contoso Electronics Smart Home division.
 
