@@ -1,0 +1,192 @@
+/* ─── Smart Home Communication Log ─────────────────────────── */
+
+.sh-comm-log {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  background: #fafafa;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 12px;
+}
+
+.sh-comm-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sh-comm-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #666666;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.sh-comm-live {
+  font-size: 0.625rem;
+  font-weight: 700;
+  color: #ffffff;
+  background: #e53935;
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+  animation: sh-comm-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes sh-comm-pulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+.sh-comm-waiting {
+  font-size: 0.8125rem;
+  color: #999999;
+  font-style: italic;
+  padding: 8px 0;
+}
+
+.sh-comm-messages {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ─── Message bubbles ──────────────────────────────────────── */
+
+.sh-comm-bubble {
+  border-radius: 10px;
+  padding: 12px 16px;
+  border: 1px solid #e0e0e0;
+  background: #ffffff;
+}
+
+.sh-comm-bubble-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.sh-comm-icon {
+  font-size: 1rem;
+}
+
+.sh-comm-route {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #333333;
+}
+
+.sh-comm-type-badge {
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-left: auto;
+}
+
+.sh-comm-type-instruction {
+  background: #e3f2fd;
+  color: #1565c0;
+}
+
+.sh-comm-type-finding {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.sh-comm-type-concern {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+.sh-comm-type-approval {
+  background: #e8f5e9;
+  color: #1b5e20;
+}
+
+.sh-comm-type-condition {
+  background: #fff8e1;
+  color: #f57f17;
+}
+
+.sh-comm-type-recommendation {
+  background: #e8eaf6;
+  color: #283593;
+}
+
+.sh-comm-type-handoff {
+  background: #f3e5f5;
+  color: #6a1b9a;
+}
+
+.sh-comm-type-objection {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.sh-comm-bubble-body {
+  font-size: 0.8125rem;
+  color: #444444;
+  line-height: 1.5;
+}
+
+/* ─── Bubble border colors by type ─────────────────────────── */
+
+.sh-comm-instruction {
+  border-left: 3px solid #1565c0;
+}
+
+.sh-comm-finding {
+  border-left: 3px solid #2e7d32;
+}
+
+.sh-comm-concern {
+  border-left: 3px solid #e65100;
+}
+
+.sh-comm-approval {
+  border-left: 3px solid #1b5e20;
+}
+
+.sh-comm-condition {
+  border-left: 3px solid #f57f17;
+}
+
+.sh-comm-recommendation {
+  border-left: 3px solid #283593;
+}
+
+.sh-comm-handoff {
+  border-left: 3px solid #6a1b9a;
+}
+
+.sh-comm-objection {
+  border-left: 3px solid #c62828;
+}
+
+/* ─── Explainer ────────────────────────────────────────────── */
+
+.sh-comm-explainer {
+  padding: 8px 0 0;
+  font-size: 0.8125rem;
+  color: #666666;
+}
+
+.sh-comm-explainer summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.75rem;
+  color: #555555;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.sh-comm-explainer p {
+  margin: 8px 0 0;
+  line-height: 1.5;
+}

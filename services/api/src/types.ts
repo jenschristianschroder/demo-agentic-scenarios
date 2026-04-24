@@ -265,3 +265,113 @@ export interface ProposalRequest {
   prompt: string;
   creativityLevel: number;
 }
+
+// ─── Smart Home Bundle Builder Contracts ─────────────────────────────────────
+
+export type SmartHomeAgentRole =
+  | 'orchestrator'
+  | 'needs-agent'
+  | 'device-agent'
+  | 'privacy-agent'
+  | 'compatibility-agent'
+  | 'bundle-agent';
+
+export type SmartHomeStep =
+  | 'user-request'
+  | 'needs-analysis'
+  | 'device-recommendation'
+  | 'privacy-review'
+  | 'compatibility-check'
+  | 'bundle-assembly'
+  | 'final-bundle';
+
+export interface HomeNeeds {
+  spaceType: string;
+  spaceSize: string;
+  privacyLevel: string;
+  budgetDKK: number;
+  priorities: string[];
+  additionalNotes: string;
+}
+
+export interface DeviceRecommendation {
+  name: string;
+  category: string;
+  priceDKK: number;
+  keyFeatures: string;
+  protocols: string[];
+  privacyFeatures: string[];
+  reason: string;
+}
+
+export interface PrivacyAssessment {
+  deviceName: string;
+  hasCamera: boolean;
+  hasMicrophone: boolean;
+  hasHardwareMuteSwitch: boolean;
+  hasPrivacyShutter: boolean;
+  localProcessing: boolean;
+  privacyRating: 'approved' | 'conditional' | 'rejected';
+  conditions: string[];
+  concerns: string[];
+}
+
+export interface CompatibilityResult {
+  deviceName: string;
+  protocols: string[];
+  matterSupport: boolean;
+  threadSupport: boolean;
+  zigbeeSupport: boolean;
+  wifiSupport: boolean;
+  hubRequired: boolean;
+  compatibleWith: string[];
+  issues: string[];
+}
+
+export interface BundleItem {
+  name: string;
+  quantity: number;
+  unitPriceDKK: number;
+  totalPriceDKK: number;
+}
+
+export interface SmartHomeBundleSummary {
+  bundleName: string;
+  items: BundleItem[];
+  totalPriceDKK: number;
+  budgetDKK: number;
+  withinBudget: boolean;
+  setupPlan: string;
+  privacyOk: boolean;
+  compatibilityOk: boolean;
+  agentMessages: SmartHomeAgentMessage[];
+}
+
+export interface SmartHomeAgentMessage {
+  from: SmartHomeAgentRole | 'user';
+  to: SmartHomeAgentRole;
+  message: string;
+  timestamp: string;
+  type: 'instruction' | 'finding' | 'concern' | 'approval' | 'condition' | 'recommendation' | 'handoff' | 'objection';
+}
+
+export interface SmartHomeEvent {
+  type: 'step-start' | 'step-complete' | 'agent-message' | 'run-complete' | 'error';
+  step: SmartHomeStep;
+  timestamp: string;
+  data:
+    | HomeNeeds
+    | DeviceRecommendation[]
+    | PrivacyAssessment
+    | CompatibilityResult[]
+    | SmartHomeAgentMessage
+    | SmartHomeBundleSummary
+    | { text: string }
+    | { message: string }
+    | null;
+}
+
+export interface SmartHomeRequest {
+  prompt: string;
+  creativityLevel: number;
+}

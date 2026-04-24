@@ -1,0 +1,199 @@
+/* ─── Smart Home Demo Screen ───────────────────────────────── */
+
+.smart-home-screen {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: #f5f5f5;
+}
+
+.smart-home-header {
+  display: flex;
+  align-items: center;
+  padding: 16px 32px;
+  background: #ffffff;
+  border-bottom: 1.5px solid #e0e0e0;
+  gap: 12px;
+}
+
+.smart-home-header-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #111111;
+}
+
+.smart-home-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px 32px;
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* ─── Controls ─────────────────────────────────────────────── */
+
+.smart-home-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px;
+  background: #ffffff;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 12px;
+}
+
+.smart-home-settings {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+/* ─── Result ───────────────────────────────────────────────── */
+
+.smart-home-result {
+  padding: 24px;
+  background: #ffffff;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 12px;
+}
+
+.sh-result-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.sh-result-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #111111;
+}
+
+.sh-result-badge {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+.badge-ok {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.badge-warn {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+/* ─── Bundle items table ───────────────────────────────────── */
+
+.sh-items-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 16px;
+  font-size: 0.8125rem;
+}
+
+.sh-items-table th {
+  text-align: left;
+  font-weight: 600;
+  color: #666666;
+  text-transform: uppercase;
+  font-size: 0.6875rem;
+  letter-spacing: 0.04em;
+  padding: 6px 8px;
+  border-bottom: 1.5px solid #e0e0e0;
+}
+
+.sh-items-table td {
+  padding: 8px;
+  border-bottom: 1px solid #f0f0f0;
+  color: #333333;
+}
+
+.sh-items-table tr:last-child td {
+  border-bottom: none;
+}
+
+.sh-items-total {
+  font-weight: 700;
+}
+
+/* ─── Summary grid ─────────────────────────────────────────── */
+
+.sh-summary-grid {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.sh-summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sh-summary-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #999999;
+  letter-spacing: 0.04em;
+}
+
+.sh-summary-value {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #111111;
+}
+
+/* ─── Setup plan ───────────────────────────────────────────── */
+
+.sh-setup-plan {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.sh-setup-plan h2,
+.sh-setup-plan h3 {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #111111;
+  margin: 12px 0 6px;
+}
+
+.sh-setup-plan h2:first-child,
+.sh-setup-plan h3:first-child {
+  margin-top: 0;
+}
+
+.sh-setup-plan p {
+  font-size: 0.8125rem;
+  color: #444444;
+  line-height: 1.5;
+  margin: 4px 0;
+}
+
+.sh-setup-plan ul,
+.sh-setup-plan ol {
+  font-size: 0.8125rem;
+  color: #444444;
+  line-height: 1.6;
+  padding-left: 20px;
+  margin: 4px 0;
+}
+
+/* ─── Step detail ──────────────────────────────────────────── */
+
+.smart-home-step-detail {
+  padding: 0;
+}
