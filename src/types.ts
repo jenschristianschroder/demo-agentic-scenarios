@@ -9,6 +9,7 @@ export type AgentStep =
   | 'orchestrator'
   | 'generator'
   | 'fact-checker'
+  | 'revision'
   | 'final-answer';
 
 /** Fact-check status for a single claim */
@@ -38,6 +39,22 @@ export interface FactCheckerOutput {
   evidenceReferences: string[];
 }
 
+/** Inter-agent communication message */
+export interface AgentMessage {
+  from: AgentStep;
+  to: AgentStep;
+  message: string;
+  timestamp: string;
+  type: 'finding' | 'instruction' | 'confirmation';
+}
+
+/** Revision agent output */
+export interface RevisionOutput {
+  revisedText: string;
+  changesApplied: string[];
+  iteration: number;
+}
+
 /** Orchestrator decision record */
 export interface OrchestratorDecision {
   action: 'generate' | 'fact-check' | 'revise' | 'approve' | 'reject';
@@ -51,7 +68,9 @@ export interface IterationRecord {
   iteration: number;
   generatorOutput: GeneratorOutput;
   factCheckerOutput?: FactCheckerOutput;
+  revisionOutput?: RevisionOutput;
   orchestratorDecision?: OrchestratorDecision;
+  agentMessages?: AgentMessage[];
 }
 
 /** Final run summary */
@@ -66,14 +85,16 @@ export interface RunSummary {
 
 /** SSE event streamed from the backend during orchestration */
 export interface OrchestrationEvent {
-  type: 'step-start' | 'step-complete' | 'run-complete' | 'error';
+  type: 'step-start' | 'step-complete' | 'run-complete' | 'agent-message' | 'error';
   step: AgentStep;
   timestamp: string;
   data:
     | OrchestratorDecision
     | GeneratorOutput
     | FactCheckerOutput
+    | RevisionOutput
     | RunSummary
+    | AgentMessage
     | { message: string };
 }
 
@@ -85,6 +106,7 @@ export interface OrchestrationRequest {
   acceptanceThreshold: number;
   maxIterations: number;
   generatorKnowledgeSource: boolean;
+  scenario?: 'default' | 'rag-failure-recovery';
 }
 
 /** Step labels for display */
@@ -93,12 +115,13 @@ export const STEP_LABELS: Record<AgentStep, string> = {
   orchestrator: 'Orchestrator',
   generator: 'Generator',
   'fact-checker': 'Fact Checker',
+  revision: 'Revision Agent',
   'final-answer': 'Final Answer',
 };
 
 // ─── Scenario / Features definitions ─────────────────────────────────────────
 
-export type ScenarioId = 'multi-agent-orchestration' | 'rag-pipeline' | 'tool-use';
+export type ScenarioId = 'multi-agent-orchestration' | 'rag-pipeline' | 'tool-use' | 'rag-failure-recovery';
 
 export interface ScenarioInfo {
   id: ScenarioId;
@@ -132,6 +155,14 @@ export const SCENARIOS: ScenarioInfo[] = [
       'An orchestrator coordinates content generation and fact-checking agents in an iterative loop with real-time visibility',
     icon: '🤖',
     route: '/demo',
+  },
+  {
+    id: 'rag-failure-recovery',
+    label: 'RAG Failure & Recovery',
+    description:
+      'Watch the system detect hallucinated product claims, retrieve real catalog facts, and rewrite until grounded',
+    icon: '🔍',
+    route: '/rag-failure-demo',
   },
 ];
 

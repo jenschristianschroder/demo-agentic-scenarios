@@ -7,6 +7,7 @@ export type AgentStep =
   | 'orchestrator'
   | 'generator'
   | 'fact-checker'
+  | 'revision'
   | 'final-answer';
 
 export type ClaimStatus = 'supported' | 'unsupported' | 'uncertain';
@@ -32,6 +33,22 @@ export interface FactCheckerOutput {
   evidenceReferences: string[];
 }
 
+/** Inter-agent communication message */
+export interface AgentMessage {
+  from: AgentStep;
+  to: AgentStep;
+  message: string;
+  timestamp: string;
+  type: 'finding' | 'instruction' | 'confirmation';
+}
+
+/** Revision agent output */
+export interface RevisionOutput {
+  revisedText: string;
+  changesApplied: string[];
+  iteration: number;
+}
+
 export interface OrchestratorDecision {
   action: 'generate' | 'fact-check' | 'revise' | 'approve' | 'reject';
   reason: string;
@@ -43,7 +60,9 @@ export interface IterationRecord {
   iteration: number;
   generatorOutput: GeneratorOutput;
   factCheckerOutput?: FactCheckerOutput;
+  revisionOutput?: RevisionOutput;
   orchestratorDecision?: OrchestratorDecision;
+  agentMessages?: AgentMessage[];
 }
 
 export interface RunSummary {
@@ -56,14 +75,16 @@ export interface RunSummary {
 }
 
 export interface OrchestrationEvent {
-  type: 'step-start' | 'step-complete' | 'run-complete' | 'error';
+  type: 'step-start' | 'step-complete' | 'run-complete' | 'agent-message' | 'error';
   step: AgentStep;
   timestamp: string;
   data:
     | OrchestratorDecision
     | GeneratorOutput
     | FactCheckerOutput
+    | RevisionOutput
     | RunSummary
+    | AgentMessage
     | { message: string };
 }
 
@@ -74,6 +95,7 @@ export interface OrchestrationRequest {
   acceptanceThreshold: number;
   maxIterations: number;
   generatorKnowledgeSource: boolean;
+  scenario?: 'default' | 'rag-failure-recovery';
 }
 
 // ─── Tool-Use Agent Contracts ────────────────────────────────────────────────

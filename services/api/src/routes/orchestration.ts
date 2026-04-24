@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import type { OrchestrationRequest } from '../types.js';
-import { runOrchestrator } from '../agents/orchestrator.js';
+import { runOrchestrator, runRagFailureOrchestrator } from '../agents/orchestrator.js';
 
 export const orchestrationRouter = Router();
 
@@ -28,6 +28,7 @@ orchestrationRouter.post('/run', (req, res) => {
   const maxIterations = clamp(Math.round(body.maxIterations ?? 3), 1, 10);
   const workflowMode = body.workflowMode === 'auto-revise' ? 'auto-revise' : 'review-after-first';
   const generatorKnowledgeSource = body.generatorKnowledgeSource !== false;
+  const scenario = body.scenario === 'rag-failure-recovery' ? 'rag-failure-recovery' : 'default';
 
   // ── Set up SSE headers ───────────────────────────────────────────────
   res.writeHead(200, {
@@ -44,10 +45,16 @@ orchestrationRouter.post('/run', (req, res) => {
     acceptanceThreshold,
     maxIterations,
     generatorKnowledgeSource,
+    scenario,
   };
 
+  // Choose orchestrator based on scenario
+  const orchestrate = scenario === 'rag-failure-recovery'
+    ? runRagFailureOrchestrator
+    : runOrchestrator;
+
   // Run the orchestrator — it writes SSE events directly to the response
-  runOrchestrator(request, res).catch((err) => {
+  orchestrate(request, res).catch((err) => {
     console.error('Orchestration error:', err);
     const errorEvent = JSON.stringify({
       type: 'error',
