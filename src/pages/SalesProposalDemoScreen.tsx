@@ -42,31 +42,32 @@ const SalesProposalDemoScreen: React.FC = () => {
   const [support, setSupport] = useState<SupportAssessment | null>(null);
   const [summary, setSummary] = useState<ProposalSummary | null>(null);
 
-  /** Track when each step's spinner started so we can enforce MIN_SPINNER_MS. */
+  /**
+   * Visual timeline: the earliest wall-clock time at which the current step's
+   * spinner should visually END. Each step-start pushes this forward by
+   * MIN_SPINNER_MS so fast agents cascade instead of all finishing at once.
+   * Slow LLM steps naturally exceed the timeline and don't add extra delay.
+   */
+  const visualTimeline = useRef(0);
+
+  /** Guards against stale timers from a previous run. */
+  const runGeneration = useRef(0);
+
+  /** Track when each step's spinner visually started (for spinner removal). */
   const stepStartTimes = useRef<Map<ProposalStep, number>>(new Map());
-
-  /** Remove a step from inProgressSteps after the minimum spinner time. */
-  const finishStep = useCallback((step: ProposalStep) => {
-    const startedAt = stepStartTimes.current.get(step) ?? Date.now();
-    const elapsed = Date.now() - startedAt;
-    const remaining = Math.max(0, MIN_SPINNER_MS - elapsed);
-
-    setTimeout(() => {
-      setInProgressSteps((prev) => {
-        const next = new Set(prev);
-        next.delete(step);
-        return next;
-      });
-    }, remaining);
-  }, []);
 
   const handleRun = useCallback(async () => {
     if (!prompt.trim() || isRunning) return;
 
+    // Bump generation to invalidate any pending timers from a prior run
+    runGeneration.current++;
+    const gen = runGeneration.current;
+
     setIsRunning(true);
-    setActiveStep('user-request');
-    setInProgressSteps(new Set(['user-request']));
-    stepStartTimes.current = new Map([['user-request', Date.now()]]);
+    setActiveStep(null);
+    setInProgressSteps(new Set());
+    stepStartTimes.current = new Map();
+    visualTimeline.current = Date.now();
     setSelectedStep(null);
     setEvents([]);
     setAgentMessages([]);
@@ -82,66 +83,112 @@ const SalesProposalDemoScreen: React.FC = () => {
       creativityLevel,
     };
 
+    /** Schedule a state update, skipping if a newer run has started. */
+    const schedule = (delay: number, fn: () => void) => {
+      if (delay <= 0) {
+        fn();
+      } else {
+        setTimeout(() => { if (runGeneration.current === gen) fn(); }, delay);
+      }
+    };
+
     try {
       await runSalesProposal(request, (event: ProposalEvent) => {
-        setEvents((prev) => [...prev, event]);
+        if (runGeneration.current !== gen) return;
 
+        const now = Date.now();
+
+        // ── step-start: cascade fast steps along the visual timeline ─────
         if (event.type === 'step-start') {
-          setActiveStep(event.step);
-          stepStartTimes.current.set(event.step, Date.now());
-          setInProgressSteps((prev) => new Set(prev).add(event.step));
+          const visualStart = Math.max(visualTimeline.current, now);
+          visualTimeline.current = visualStart + MIN_SPINNER_MS;
+          const delay = visualStart - now;
+
+          schedule(delay, () => {
+            setEvents((prev) => [...prev, event]);
+            setActiveStep(event.step);
+            stepStartTimes.current.set(event.step, Date.now());
+            setInProgressSteps((prev) => new Set(prev).add(event.step));
+          });
+          return;
         }
 
+        // ── step-complete: release at the visual timeline endpoint ────────
         if (event.type === 'step-complete') {
-          finishStep(event.step);
+          const delay = Math.max(0, visualTimeline.current - now);
 
-          switch (event.step) {
-            case 'customer-intake':
-              setRequirements(event.data as CustomerRequirements);
-              break;
-            case 'product-search':
-              setCandidates(event.data as ProductCandidate[]);
-              break;
-            case 'pricing':
-              setPricing(event.data as PricingResult);
-              break;
-            case 'support-check':
-              setSupport(event.data as SupportAssessment);
-              break;
-            case 'final-proposal':
-              setSummary(event.data as ProposalSummary);
-              break;
-          }
-        }
-
-        if (event.type === 'agent-message') {
-          const msg = event.data as ProposalAgentMessage;
-          setAgentMessages((prev) => [...prev, msg]);
-        }
-
-        if (event.type === 'run-complete') {
-          setSummary(event.data as ProposalSummary);
-          setActiveStep('final-proposal');
-          // Let any remaining spinners finish their minimum display time
-          const now = Date.now();
-          setInProgressSteps((prev) => {
-            for (const step of prev) {
-              const startedAt = stepStartTimes.current.get(step) ?? now;
-              const remaining = Math.max(0, MIN_SPINNER_MS - (now - startedAt));
+          schedule(delay, () => {
+            // Remove spinner after MIN_SPINNER_MS from its visual start
+            const startedAt = stepStartTimes.current.get(event.step) ?? Date.now();
+            const elapsed = Date.now() - startedAt;
+            const remaining = Math.max(0, MIN_SPINNER_MS - elapsed);
+            if (remaining <= 0) {
+              setInProgressSteps((prev) => {
+                const next = new Set(prev);
+                next.delete(event.step);
+                return next;
+              });
+            } else {
               setTimeout(() => {
-                setInProgressSteps((p) => {
-                  const next = new Set(p);
-                  next.delete(step);
+                if (runGeneration.current !== gen) return;
+                setInProgressSteps((prev) => {
+                  const next = new Set(prev);
+                  next.delete(event.step);
                   return next;
                 });
               }, remaining);
             }
-            return prev;
+
+            setEvents((prev) => [...prev, event]);
+
+            switch (event.step) {
+              case 'customer-intake':
+                setRequirements(event.data as CustomerRequirements);
+                break;
+              case 'product-search':
+                setCandidates(event.data as ProductCandidate[]);
+                break;
+              case 'pricing':
+                setPricing(event.data as PricingResult);
+                break;
+              case 'support-check':
+                setSupport(event.data as SupportAssessment);
+                break;
+              case 'final-proposal':
+                setSummary(event.data as ProposalSummary);
+                break;
+            }
           });
-          setIsRunning(false);
+          return;
         }
 
+        // ── agent-message: appear when the current step's spinner finishes ─
+        if (event.type === 'agent-message') {
+          const delay = Math.max(0, visualTimeline.current - now);
+          schedule(delay, () => {
+            setEvents((prev) => [...prev, event]);
+            const msg = event.data as ProposalAgentMessage;
+            setAgentMessages((prev) => [...prev, msg]);
+          });
+          return;
+        }
+
+        // ── run-complete: finalize after visual timeline drains ───────────
+        if (event.type === 'run-complete') {
+          const delay = Math.max(0, visualTimeline.current - now);
+          schedule(delay, () => {
+            setEvents((prev) => [...prev, event]);
+            setSummary(event.data as ProposalSummary);
+            setActiveStep('final-proposal');
+            setInProgressSteps(new Set());
+            setIsRunning(false);
+          });
+          return;
+        }
+
+        // ── error: show immediately ──────────────────────────────────────
         if (event.type === 'error') {
+          setEvents((prev) => [...prev, event]);
           const errData = event.data as { message: string };
           setError(errData.message);
           setIsRunning(false);
@@ -150,12 +197,13 @@ const SalesProposalDemoScreen: React.FC = () => {
         }
       });
     } catch (err) {
+      if (runGeneration.current !== gen) return;
       setError(err instanceof Error ? err.message : 'Sales Proposal failed');
       setIsRunning(false);
       setInProgressSteps(new Set());
       setActiveStep(null);
     }
-  }, [prompt, creativityLevel, isRunning, finishStep]);
+  }, [prompt, creativityLevel, isRunning]);
 
   return (
     <div className="sales-proposal-screen">
