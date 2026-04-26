@@ -2,12 +2,24 @@
 // Uses Azure OpenAI function calling to let the model manage Spotify playlists
 // on behalf of the user. The access token is passed from the frontend (PKCE)
 // and used for all Spotify API calls. Streams tool call events via SSE.
+//
+// When AZURE_OPENAI_REASONING_DEPLOYMENT is set the agent uses the Responses API
+// (client.responses.create) with reasoning: { effort: "medium", summary: "auto" }
+// so that the model's chain-of-thought is surfaced in the UI. Otherwise it falls
+// back to the standard Chat Completions path.
 
 import type { Response } from 'express';
 import type { ToolEvent, ToolCallRecord, ToolDefinition } from '../types.js';
-import { getOpenAIClient } from '../azureClients.js';
+import { getOpenAIClient, getReasoningClient, getReasoningDeployment } from '../azureClients.js';
 import { executeSpotifyTool } from '../tools/spotifyTools.js';
 import type { ChatCompletionMessageParam, ChatCompletionTool } from 'openai/resources/chat/completions';
+import type {
+  FunctionTool,
+  ResponseInputItem,
+  ResponseFunctionToolCall,
+  ResponseReasoningItem,
+  ResponseOutputMessage,
+} from 'openai/resources/responses/responses';
 
 // ─── Tool schemas for OpenAI function calling ────────────────────────────────
 
@@ -160,6 +172,16 @@ export const SPOTIFY_TOOL_DEFINITIONS: ToolDefinition[] = TOOLS.map((t) => ({
   parameters: t.function.parameters as Record<string, unknown>,
 }));
 
+// ─── Responses API tool format (FunctionTool) ────────────────────────────────
+
+const RESPONSE_TOOLS: FunctionTool[] = TOOLS.map((t) => ({
+  type: 'function',
+  name: t.function.name,
+  description: t.function.description ?? null,
+  parameters: (t.function.parameters as Record<string, unknown>) ?? null,
+  strict: null,
+}));
+
 const WEB_SEARCH_RULES = `- When the user asks about a genre, mood, artist, activity, or any music topic, start by calling web_search to gather context (e.g. well-known tracks, key artists, characteristics of the genre). Use this research to craft better Spotify search queries.
 - When the user asks you to create a playlist with tracks, follow this workflow:
   1. web_search (research the genre/mood/theme — do multiple searches to find key artists, iconic tracks, and hidden gems)
@@ -194,8 +216,201 @@ const DEFAULT_MAX_TOOL_ROUNDS = 20;
 
 /**
  * Run the Spotify playlist agent, streaming events via SSE.
+ *
+ * When AZURE_OPENAI_REASONING_DEPLOYMENT is configured the agent uses the
+ * OpenAI Responses API with reasoning: { effort: "medium", summary: "auto" }
+ * so the model's chain-of-thought summaries are visible in the UI.
+ * Otherwise it falls back to the standard Chat Completions path.
  */
 export async function runSpotifyAgent(
+  prompt: string,
+  creativityLevel: number,
+  accessToken: string,
+  maxToolCalls: number,
+  res: Response
+): Promise<void> {
+  const reasoningClient = getReasoningClient();
+  const reasoningDeployment = getReasoningDeployment();
+
+  if (reasoningClient && reasoningDeployment) {
+    return runSpotifyAgentReasoning(prompt, accessToken, maxToolCalls, reasoningClient, reasoningDeployment, res);
+  }
+  return runSpotifyAgentChat(prompt, creativityLevel, accessToken, maxToolCalls, res);
+}
+
+// ─── Responses API path (reasoning model) ────────────────────────────────────
+
+async function runSpotifyAgentReasoning(
+  prompt: string,
+  accessToken: string,
+  maxToolCalls: number,
+  client: ReturnType<typeof getReasoningClient> & object,
+  deployment: string,
+  res: Response
+): Promise<void> {
+  const toolCalls: ToolCallRecord[] = [];
+  let callCounter = 0;
+  const maxRounds = maxToolCalls > 0 ? maxToolCalls : DEFAULT_MAX_TOOL_ROUNDS;
+  const ts = () => new Date().toISOString();
+
+  // ── Step 1: User request ─────────────────────────────────────────────────
+  emit(res, { type: 'step-start', step: 'user-request', timestamp: ts(), data: { prompt } });
+  emit(res, { type: 'step-complete', step: 'user-request', timestamp: ts(), data: { prompt } });
+
+  // ── Step 2: Show available tools ─────────────────────────────────────────
+  emit(res, { type: 'step-start', step: 'reasoning', timestamp: ts(), data: { tools: SPOTIFY_TOOL_DEFINITIONS } });
+
+  // ── Step 3: Tool-calling loop ─────────────────────────────────────────────
+  // The Responses API maintains conversation state via previous_response_id.
+  // We track the last response ID and only send new inputs each turn.
+  let previousResponseId: string | undefined;
+  let round = 0;
+  let finalText = '';
+
+  // Initial input: system instructions + user message
+  let currentInput: ResponseInputItem[] = [
+    { role: 'system', content: SYSTEM_PROMPT },
+    { role: 'user', content: prompt },
+  ];
+
+  while (round < maxRounds) {
+    round++;
+
+    const response = await client.responses.create({
+      model: deployment,
+      ...(previousResponseId
+        ? { previous_response_id: previousResponseId, input: currentInput }
+        : { input: currentInput }),
+      tools: RESPONSE_TOOLS,
+      // 'medium' effort balances quality and latency for multi-step Spotify workflows.
+      // Switch to 'high' for more complex reasoning tasks or 'low' for faster responses.
+      reasoning: { effort: 'medium', summary: 'auto' },
+    });
+
+    previousResponseId = response.id;
+    // On subsequent turns only pass new tool results
+    currentInput = [];
+
+    // Collect function calls from this response for parallel execution
+    const functionCalls: ResponseFunctionToolCall[] = [];
+
+    for (const item of response.output) {
+      if (item.type === 'reasoning') {
+        // Emit each reasoning summary block as a 'reasoning' SSE event
+        const reasoningItem = item as ResponseReasoningItem;
+        for (const summaryPart of reasoningItem.summary) {
+          if (summaryPart.type === 'summary_text' && summaryPart.text) {
+            emit(res, {
+              type: 'reasoning',
+              step: 'reasoning',
+              timestamp: ts(),
+              data: { text: summaryPart.text },
+            });
+          }
+        }
+      } else if (item.type === 'function_call') {
+        functionCalls.push(item as ResponseFunctionToolCall);
+      } else if (item.type === 'message') {
+        // Capture any text output in case this is the final response
+        const msgItem = item as ResponseOutputMessage;
+        for (const part of msgItem.content) {
+          if (part.type === 'output_text') {
+            finalText += part.text;
+          }
+        }
+      }
+    }
+
+    // No tool calls → model has produced its final answer
+    if (functionCalls.length === 0) {
+      emit(res, {
+        type: 'step-complete',
+        step: 'reasoning',
+        timestamp: ts(),
+        data: { message: 'Model decided no more tools needed' },
+      });
+      break;
+    }
+
+    // Execute each tool call and collect results
+    for (const tc of functionCalls) {
+      callCounter++;
+      const toolName = tc.name;
+      const toolArgs = JSON.parse(tc.arguments) as Record<string, unknown>;
+      const callId = `call-${callCounter}`;
+
+      emit(res, {
+        type: 'tool-call-start',
+        step: 'tool-call',
+        timestamp: ts(),
+        data: { id: callId, toolName, arguments: toolArgs, result: null, durationMs: 0 },
+      });
+
+      const startTime = Date.now();
+      const result = await executeSpotifyTool(toolName, toolArgs, accessToken);
+      const durationMs = Date.now() - startTime;
+
+      const record: ToolCallRecord = { id: callId, toolName, arguments: toolArgs, result, durationMs };
+      toolCalls.push(record);
+
+      emit(res, {
+        type: 'tool-call-complete',
+        step: 'tool-call',
+        timestamp: ts(),
+        data: record,
+      });
+
+      // Feed result back for the next turn
+      currentInput.push({
+        type: 'function_call_output',
+        call_id: tc.call_id,
+        output: JSON.stringify(result),
+      } as ResponseInputItem);
+    }
+  }
+
+  // ── Step 4: Final answer ──────────────────────────────────────────────────
+  emit(res, { type: 'step-start', step: 'final-answer', timestamp: ts(), data: null });
+
+  // If the loop exited due to maxRounds being hit rather than the model finishing,
+  // make one more call without tools to get a summary response.
+  if (!finalText && previousResponseId) {
+    const summaryResponse = await client.responses.create({
+      model: deployment,
+      previous_response_id: previousResponseId,
+      input: currentInput.length > 0 ? currentInput : [],
+      reasoning: { effort: 'medium', summary: 'auto' },
+    });
+    for (const item of summaryResponse.output) {
+      if (item.type === 'message') {
+        const msgItem = item as ResponseOutputMessage;
+        for (const part of msgItem.content) {
+          if (part.type === 'output_text') {
+            finalText += part.text;
+          }
+        }
+      }
+    }
+  }
+
+  if (!finalText) {
+    finalText = 'Task complete.';
+  }
+
+  emit(res, {
+    type: 'step-complete',
+    step: 'final-answer',
+    timestamp: ts(),
+    data: { text: finalText, toolCalls },
+  });
+
+  res.write('data: [DONE]\n\n');
+  res.end();
+}
+
+// ─── Chat Completions path (standard models) ─────────────────────────────────
+
+async function runSpotifyAgentChat(
   prompt: string,
   creativityLevel: number,
   accessToken: string,
@@ -256,7 +471,7 @@ export async function runSpotifyAgent(
     for (const tc of assistantMessage.tool_calls) {
       callCounter++;
       const toolName = tc.function.name;
-      const toolArgs = JSON.parse(tc.function.arguments);
+      const toolArgs = JSON.parse(tc.function.arguments) as Record<string, unknown>;
       const callId = `call-${callCounter}`;
 
       // Emit tool call start
