@@ -11,6 +11,7 @@ import SmartHomeDemoScreen from './pages/SmartHomeDemoScreen';
 import SpotifyDemoScreen from './pages/SpotifyDemoScreen';
 import SpotifyCallbackPage from './pages/SpotifyCallbackPage';
 import ModelRouterDemoScreen from './pages/ModelRouterDemoScreen';
+import ImageGenDemoScreen from './pages/ImageGenDemoScreen';
 
 const App: React.FC = () => {
   return (
@@ -26,6 +27,7 @@ const App: React.FC = () => {
       <Route path="/spotify-demo" element={<SpotifyDemoScreen />} />
       <Route path="/spotify-callback" element={<SpotifyCallbackPage />} />
       <Route path="/model-router-demo" element={<ModelRouterDemoScreen />} />
+      <Route path="/image-gen-demo" element={<ImageGenDemoScreen />} />
     </Routes>
   );
 };
