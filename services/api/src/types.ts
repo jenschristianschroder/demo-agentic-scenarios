@@ -140,6 +140,7 @@ export interface SpotifyRequest {
   prompt: string;
   creativityLevel: number;
   accessToken: string;
+  maxToolCalls?: number;
 }
 
 // ─── RAG Pipeline Contracts ─────────────────────────────────────────────────

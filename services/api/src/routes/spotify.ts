@@ -30,6 +30,7 @@ spotifyRouter.post('/run', (req, res) => {
   }
 
   const creativityLevel = clamp(body.creativityLevel ?? 0.3, 0, 1);
+  const maxToolCalls = clamp(Math.round(body.maxToolCalls ?? 20), 1, 40);
 
   // ── Set up SSE headers ───────────────────────────────────────────────
   res.writeHead(200, {
@@ -39,7 +40,7 @@ spotifyRouter.post('/run', (req, res) => {
     'X-Accel-Buffering': 'no',
   });
 
-  runSpotifyAgent(body.prompt.trim(), creativityLevel, body.accessToken.trim(), res).catch((err) => {
+  runSpotifyAgent(body.prompt.trim(), creativityLevel, body.accessToken.trim(), maxToolCalls, res).catch((err) => {
     console.error('Spotify agent error:', err);
     const errorEvent = JSON.stringify({
       type: 'error',
