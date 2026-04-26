@@ -186,3 +186,33 @@ Spotify's [February 2026 Web API migration](https://developer.spotify.com/docume
 - The `get_recommendations` tool has been removed from the agent. Track discovery is handled entirely via `search_tracks` using multiple queries.
 - If your app requires the recommendations endpoint, apply for [Extended Quota](https://developer.spotify.com/documentation/web-api/concepts/quota-modes).
 
+## Model Router Demo
+
+The Model Router demo showcases [Azure AI Foundry's Model Router](https://learn.microsoft.com/en-us/azure/foundry/openai/concepts/model-router) — a single deployment endpoint that intelligently routes each prompt to the best-suited model based on a configurable routing mode.
+
+### How it works
+
+The demo sends the **same prompt** to the Model Router three times — once in each routing mode (**balanced**, **quality**, **cost**) — and displays the results **side-by-side**. This makes the routing behavior visible:
+
+- **Which model** was selected for each mode (e.g. `gpt-4o` vs `gpt-4o-mini`)
+- **Response quality** differences between models
+- **Latency** and **token usage** trade-offs
+
+### Setup
+
+1. Deploy a **model-router** in [Azure AI Foundry](https://ai.azure.com)
+2. Set the deployment name in your `.env`:
+   ```
+   AZURE_OPENAI_MODEL_ROUTER_DEPLOYMENT=model-router
+   ```
+3. The demo will appear as a scenario card on the features screen
+
+### Routing Modes
+
+| Mode | Behavior |
+|------|----------|
+| **Balanced** | Best trade-off between quality and cost |
+| **Quality** | Always selects the most capable model |
+| **Cost** | Selects the cheapest model that meets a quality threshold |
+
+

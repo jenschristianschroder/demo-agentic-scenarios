@@ -385,3 +385,35 @@ export interface SmartHomeRequest {
   prompt: string;
   creativityLevel: number;
 }
+
+// ─── Model Router Contracts ─────────────────────────────────────────────────
+
+export type ModelRouterRoutingMode = 'balanced' | 'quality' | 'cost';
+
+export type ModelRouterStep = 'user-request' | 'routing' | 'result';
+
+export interface ModelRouterRequest {
+  prompt: string;
+  creativityLevel: number;
+  routingMode: ModelRouterRoutingMode;
+}
+
+export interface ModelRouterResult {
+  routingMode: ModelRouterRoutingMode;
+  modelUsed: string;
+  responseText: string;
+  latencyMs: number;
+  promptTokens: number;
+  completionTokens: number;
+}
+
+export interface ModelRouterEvent {
+  type: 'step-start' | 'step-complete' | 'error' | 'done';
+  step: ModelRouterStep;
+  timestamp: string;
+  data:
+    | ModelRouterResult
+    | { prompt: string }
+    | { message: string }
+    | null;
+}

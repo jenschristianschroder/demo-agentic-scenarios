@@ -7,6 +7,7 @@ import { spotifyRouter } from './routes/spotify.js';
 import { healthRouter } from './routes/health.js';
 import { salesProposalRouter } from './routes/salesProposal.js';
 import { smartHomeRouter } from './routes/smartHome.js';
+import { modelRouterRouter } from './routes/modelRouter.js';
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '3001', 10);
@@ -21,6 +22,7 @@ app.use('/api/tools', toolsRouter);
 app.use('/api/sales-proposal', salesProposalRouter);
 app.use('/api/smart-home', smartHomeRouter);
 app.use('/api/spotify', spotifyRouter);
+app.use('/api/model-router', modelRouterRouter);
 app.use('/health', healthRouter);
 
 app.listen(PORT, () => {

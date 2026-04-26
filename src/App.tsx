@@ -10,6 +10,7 @@ import SalesProposalDemoScreen from './pages/SalesProposalDemoScreen';
 import SmartHomeDemoScreen from './pages/SmartHomeDemoScreen';
 import SpotifyDemoScreen from './pages/SpotifyDemoScreen';
 import SpotifyCallbackPage from './pages/SpotifyCallbackPage';
+import ModelRouterDemoScreen from './pages/ModelRouterDemoScreen';
 
 const App: React.FC = () => {
   return (
@@ -24,6 +25,7 @@ const App: React.FC = () => {
       <Route path="/smart-home-demo" element={<SmartHomeDemoScreen />} />
       <Route path="/spotify-demo" element={<SpotifyDemoScreen />} />
       <Route path="/spotify-callback" element={<SpotifyCallbackPage />} />
+      <Route path="/model-router-demo" element={<ModelRouterDemoScreen />} />
     </Routes>
   );
 };
