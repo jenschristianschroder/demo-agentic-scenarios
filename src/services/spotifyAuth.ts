@@ -1,6 +1,6 @@
 // ─── Spotify PKCE Auth Utilities ─────────────────────────────────────────────
 // Implements the Authorization Code with PKCE flow for Spotify Web API.
-// All tokens are stored in sessionStorage and refreshed before expiry.
+// All tokens are stored in localStorage and refreshed before expiry.
 
 const SPOTIFY_AUTH_URL = 'https://accounts.spotify.com/authorize';
 const SPOTIFY_TOKEN_URL = 'https://accounts.spotify.com/api/token';
@@ -52,6 +52,8 @@ function getRedirectUri(): string {
 
 /**
  * Start the Spotify login flow — redirects the browser to Spotify's authorize page.
+ * Uses the top-level window to avoid Content Security Policy issues when the SPA
+ * is embedded in an iframe (Spotify blocks being framed by non-Spotify domains).
  */
 export async function startSpotifyLogin(): Promise<void> {
   const clientId = getClientId();
@@ -60,9 +62,10 @@ export async function startSpotifyLogin(): Promise<void> {
   const challenge = await generateCodeChallenge(verifier);
   const state = generateCodeVerifier().slice(0, 16);
 
-  // Persist for the callback
-  sessionStorage.setItem('spotify_code_verifier', verifier);
-  sessionStorage.setItem('spotify_auth_state', state);
+  // Persist for the callback (use localStorage so it's accessible across
+  // browsing contexts, e.g. when navigating from iframe → top-level window)
+  localStorage.setItem('spotify_code_verifier', verifier);
+  localStorage.setItem('spotify_auth_state', state);
 
   const params = new URLSearchParams({
     client_id: clientId,
@@ -74,7 +77,31 @@ export async function startSpotifyLogin(): Promise<void> {
     state,
   });
 
-  window.location.href = `${SPOTIFY_AUTH_URL}?${params}`;
+  const authUrl = `${SPOTIFY_AUTH_URL}?${params}`;
+
+  // Navigate the top-level window so Spotify's login page is not loaded inside
+  // an iframe (which Spotify's CSP would block).  The SPA is typically embedded
+  // in a demo-kiosk iframe, so we must break out of it for OAuth redirects.
+  try {
+    if (window.top !== window) {
+      // Same-origin kiosk iframe — navigate the top-level window directly.
+      window.top!.location.href = authUrl;
+      return;
+    }
+  } catch {
+    // Cross-origin iframe — window.top is not accessible.
+    // Open in a new tab so the user can still authenticate.
+    const opened = window.open(authUrl, '_blank');
+    if (!opened) {
+      throw new Error(
+        'Could not open Spotify login — please allow pop-ups for this site, or open the app directly instead of in an iframe.',
+      );
+    }
+    return;
+  }
+
+  // Not in an iframe — normal top-level redirect.
+  window.location.href = authUrl;
 }
 
 /**
@@ -83,7 +110,7 @@ export async function startSpotifyLogin(): Promise<void> {
 export async function exchangeCode(code: string): Promise<void> {
   const clientId = getClientId();
   const redirectUri = getRedirectUri();
-  const verifier = sessionStorage.getItem('spotify_code_verifier');
+  const verifier = localStorage.getItem('spotify_code_verifier');
   if (!verifier) throw new Error('Missing code_verifier — login flow was not started correctly');
 
   const res = await fetch(SPOTIFY_TOKEN_URL, {
@@ -107,8 +134,8 @@ export async function exchangeCode(code: string): Promise<void> {
   saveTokens(data);
 
   // Clean up
-  sessionStorage.removeItem('spotify_code_verifier');
-  sessionStorage.removeItem('spotify_auth_state');
+  localStorage.removeItem('spotify_code_verifier');
+  localStorage.removeItem('spotify_auth_state');
 }
 
 /**
@@ -116,7 +143,7 @@ export async function exchangeCode(code: string): Promise<void> {
  */
 export async function refreshAccessToken(): Promise<string> {
   const clientId = getClientId();
-  const refreshToken = sessionStorage.getItem('spotify_refresh_token');
+  const refreshToken = localStorage.getItem('spotify_refresh_token');
   if (!refreshToken) throw new Error('No refresh token available — please reconnect to Spotify');
 
   const res = await fetch(SPOTIFY_TOKEN_URL, {
@@ -139,7 +166,7 @@ export async function refreshAccessToken(): Promise<string> {
   return data.access_token;
 }
 
-// ─── Token storage (sessionStorage) ──────────────────────────────────────────
+// ─── Token storage (localStorage) ────────────────────────────────────────────
 
 interface TokenResponse {
   access_token: string;
@@ -148,23 +175,23 @@ interface TokenResponse {
 }
 
 function saveTokens(data: TokenResponse): void {
-  sessionStorage.setItem('spotify_access_token', data.access_token);
+  localStorage.setItem('spotify_access_token', data.access_token);
   if (data.refresh_token) {
-    sessionStorage.setItem('spotify_refresh_token', data.refresh_token);
+    localStorage.setItem('spotify_refresh_token', data.refresh_token);
   }
   // Store expiry time (current time + expires_in seconds, minus buffer)
   const expiresAt = Date.now() + (data.expires_in - TOKEN_REFRESH_BUFFER_SECONDS) * 1000;
-  sessionStorage.setItem('spotify_token_expires_at', String(expiresAt));
+  localStorage.setItem('spotify_token_expires_at', String(expiresAt));
 }
 
 /**
  * Get a valid access token, refreshing if needed.
  */
 export async function getAccessToken(): Promise<string | null> {
-  const token = sessionStorage.getItem('spotify_access_token');
+  const token = localStorage.getItem('spotify_access_token');
   if (!token) return null;
 
-  const expiresAt = Number(sessionStorage.getItem('spotify_token_expires_at') || '0');
+  const expiresAt = Number(localStorage.getItem('spotify_token_expires_at') || '0');
   if (Date.now() >= expiresAt) {
     try {
       return await refreshAccessToken();
@@ -180,23 +207,23 @@ export async function getAccessToken(): Promise<string | null> {
  * Check if the user is currently authenticated with Spotify.
  */
 export function isSpotifyAuthenticated(): boolean {
-  return !!sessionStorage.getItem('spotify_access_token');
+  return !!localStorage.getItem('spotify_access_token');
 }
 
 /**
  * Clear all Spotify tokens — effectively "disconnect".
  */
 export function clearTokens(): void {
-  sessionStorage.removeItem('spotify_access_token');
-  sessionStorage.removeItem('spotify_refresh_token');
-  sessionStorage.removeItem('spotify_token_expires_at');
-  sessionStorage.removeItem('spotify_code_verifier');
-  sessionStorage.removeItem('spotify_auth_state');
+  localStorage.removeItem('spotify_access_token');
+  localStorage.removeItem('spotify_refresh_token');
+  localStorage.removeItem('spotify_token_expires_at');
+  localStorage.removeItem('spotify_code_verifier');
+  localStorage.removeItem('spotify_auth_state');
 }
 
 /**
  * Get the stored auth state for CSRF verification on the callback page.
  */
 export function getStoredState(): string | null {
-  return sessionStorage.getItem('spotify_auth_state');
+  return localStorage.getItem('spotify_auth_state');
 }
