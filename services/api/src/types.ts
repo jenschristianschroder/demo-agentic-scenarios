@@ -117,13 +117,14 @@ export interface ToolCallRecord {
 }
 
 export interface ToolEvent {
-  type: 'step-start' | 'step-complete' | 'tool-call-start' | 'tool-call-complete' | 'error' | 'done';
+  type: 'step-start' | 'step-complete' | 'tool-call-start' | 'tool-call-complete' | 'reasoning' | 'error' | 'done';
   step: ToolStep;
   timestamp: string;
   data:
     | { message: string }
     | { prompt: string }
     | { tools: ToolDefinition[] }
+    | { text: string }
     | ToolCallRecord
     | { text: string; toolCalls: ToolCallRecord[] }
     | null;

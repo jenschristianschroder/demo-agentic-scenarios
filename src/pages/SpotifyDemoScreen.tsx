@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import type { ToolStep, ToolEvent, ToolCallRecord, ToolDefinition, SpotifyRequest } from '../types';
+import type { ToolStep, ToolEvent, ToolCallRecord, ToolDefinition, SpotifyRequest, CombinedTimelineItem } from '../types';
 import { runSpotifyAgent } from '../services/spotifyApi';
 import { startSpotifyLogin, getAccessToken, isSpotifyAuthenticated, clearTokens, fetchSpotifyProfile, getMissingScopes, getGrantedScopes } from '../services/spotifyAuth';
 import type { SpotifyUserProfile } from '../services/spotifyAuth';
@@ -90,6 +90,8 @@ const SpotifyDemoScreen: React.FC = () => {
     toolName: string;
     arguments: Record<string, unknown>;
   } | null>(null);
+  const [combinedItems, setCombinedItems] = useState<CombinedTimelineItem[]>([]);
+  const reasoningCounter = React.useRef(0);
   const [finalResponse, setFinalResponse] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [events, setEvents] = useState<ToolEvent[]>([]);
@@ -118,6 +120,8 @@ const SpotifyDemoScreen: React.FC = () => {
     setTools([]);
     setToolCalls([]);
     setPendingToolCall(null);
+    setCombinedItems([]);
+    reasoningCounter.current = 0;
     setFinalResponse(null);
     setError(null);
     setEvents([]);
@@ -149,7 +153,19 @@ const SpotifyDemoScreen: React.FC = () => {
         if (event.type === 'tool-call-complete') {
           const data = event.data as ToolCallRecord;
           setToolCalls((prev) => [...prev, data]);
+          setCombinedItems((prev) => [...prev, { kind: 'tool-call', record: data }]);
           setPendingToolCall(null);
+        }
+
+        if (event.type === 'reasoning') {
+          const data = event.data as { text: string };
+          if (data.text) {
+            const id = `reasoning-${reasoningCounter.current++}`;
+            setCombinedItems((prev) => [
+              ...prev,
+              { kind: 'reasoning', id, text: data.text },
+            ]);
+          }
         }
 
         if (event.type === 'step-complete') {
@@ -360,7 +376,7 @@ const SpotifyDemoScreen: React.FC = () => {
             <ToolInventory tools={tools} calledToolNames={calledToolNames} />
 
             {/* ── Tool execution timeline ───────────────────────────── */}
-            <ToolTimeline toolCalls={toolCalls} pendingToolCall={pendingToolCall} />
+            <ToolTimeline toolCalls={toolCalls} pendingToolCall={pendingToolCall} combinedItems={combinedItems.length > 0 ? combinedItems : undefined} />
 
             {/* ── Error ─────────────────────────────────────────────── */}
             {error && <div className="spotify-error">{error}</div>}

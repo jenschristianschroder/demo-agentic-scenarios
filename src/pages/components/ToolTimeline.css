@@ -155,18 +155,47 @@
   letter-spacing: 0.05em;
 }
 
-.tool-call-json {
+/* ─── Reasoning Card ──────────────────────────────────────── */
+
+.tool-reasoning-card {
+  border-color: #7c3aed;
+  background: #f5f0ff;
+  padding: 12px;
+  cursor: default;
+}
+
+.tool-reasoning-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.tool-reasoning-icon {
+  font-size: 0.875rem;
+  flex-shrink: 0;
+}
+
+.tool-reasoning-label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #7c3aed;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  flex: 1;
+}
+
+.tool-reasoning-seq {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #a78bfa;
+}
+
+.tool-reasoning-text {
   margin: 0;
-  padding: 10px;
-  font-size: 0.75rem;
-  font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
-  background: #f5f5f5;
-  border-radius: 6px;
-  overflow-x: auto;
-  max-height: 200px;
-  overflow-y: auto;
-  color: #333333;
-  line-height: 1.5;
+  font-size: 0.8125rem;
+  color: #4c1d95;
+  line-height: 1.55;
   white-space: pre-wrap;
   word-break: break-word;
 }
