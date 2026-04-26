@@ -277,7 +277,7 @@ export function clearTokens(): void {
 }
 
 /**
- * Get the list of scopes that were granted by Spotify but are required and missing.
+ * Get the list of required scopes that are missing from those granted by Spotify.
  * Returns an empty array if all required scopes are present.
  */
 export function getMissingScopes(): string[] {
