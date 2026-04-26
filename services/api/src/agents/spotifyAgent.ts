@@ -417,8 +417,11 @@ async function runSpotifyAgentChat(
   maxToolCalls: number,
   res: Response
 ): Promise<void> {
-  const client = getReasoningClient() ?? getOpenAIClient();
-  const deployment = getReasoningDeployment() ?? process.env.AZURE_OPENAI_DEPLOYMENT ?? 'gpt-4o';
+  // Prefer the reasoning deployment (gpt-5.4) when configured so the Spotify
+  // demo always uses the model specified by AZURE_OPENAI_REASONING_DEPLOYMENT.
+  const reasoningDeployment = getReasoningDeployment();
+  const client = reasoningDeployment ? (getReasoningClient() ?? getOpenAIClient()) : getOpenAIClient();
+  const deployment = reasoningDeployment ?? process.env.AZURE_OPENAI_DEPLOYMENT ?? 'gpt-4o';
   const toolCalls: ToolCallRecord[] = [];
   let callCounter = 0;
   const maxRounds = maxToolCalls > 0 ? maxToolCalls : DEFAULT_MAX_TOOL_ROUNDS;
