@@ -317,7 +317,7 @@ export async function getPageContent(args: { url: string }): Promise<unknown> {
         Accept: 'text/html, application/xhtml+xml, text/plain',
       },
       redirect: 'follow',
-      signal: AbortSignal.timeout(15_000),
+      signal: AbortSignal.timeout(8_000),
     });
   } catch (err) {
     return { error: `Failed to fetch page: ${err instanceof Error ? err.message : String(err)}` };
@@ -334,17 +334,35 @@ export async function getPageContent(args: { url: string }): Promise<unknown> {
     return { error: `Failed to read page body: ${err instanceof Error ? err.message : String(err)}` };
   }
 
-  // Strip HTML tags and collapse whitespace to extract readable text content
-  const text = body
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+  // Strip HTML to extract readable text content.
+  // Use loops to handle nested/malformed script and style blocks that a single
+  // pass may miss (addresses CodeQL incomplete-multi-character-sanitization).
+  let stripped = body;
+
+  // Remove script blocks (allow optional whitespace in closing tag)
+  let prev = '';
+  while (prev !== stripped) {
+    prev = stripped;
+    stripped = stripped.replace(/<script\b[^>]*>[\s\S]*?<\/\s*script[^>]*>/gi, '');
+  }
+
+  // Remove style blocks
+  prev = '';
+  while (prev !== stripped) {
+    prev = stripped;
+    stripped = stripped.replace(/<style\b[^>]*>[\s\S]*?<\/\s*style[^>]*>/gi, '');
+  }
+
+  // Remove remaining HTML tags and decode common entities.
+  // Decode &amp; last to avoid double-unescaping (e.g. &amp;lt; → &lt; → <).
+  const text = stripped
     .replace(/<[^>]+>/g, ' ')
     .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, '&')
     .replace(/\s+/g, ' ')
     .trim();
 
