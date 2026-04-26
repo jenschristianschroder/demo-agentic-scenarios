@@ -181,7 +181,7 @@ IMPORTANT RULES:
 - When the user mentions a genre or mood, use search queries or get_recommendations with appropriate parameters.
 - Always provide a clear, well-formatted final answer summarizing what you did, including playlist names, track lists, and links when available.
 - If a Spotify API error occurs, explain it clearly to the user.
-- If a tool returns a "requiresReauth" flag or a 403 Forbidden error, tell the user to disconnect and reconnect to Spotify using the button in the top right corner. This typically happens when the access token was obtained before the user was added as an authorized user in the Spotify Developer Dashboard. Do NOT suggest other workarounds — reconnecting is the fix.`;
+- If a 403 Forbidden error occurs on a write operation (creating playlists, adding/removing tracks), explain that the access token likely lacks the required scopes (playlist-modify-public / playlist-modify-private). The most common fix is to disconnect and reconnect to Spotify to obtain a fresh token. If the Spotify app is in Development Mode, the user may also need to be added under Settings → User Management in the Spotify Developer Dashboard.`;
 
 // Higher than the default 10 because Spotify workflows often require several
 // sequential steps (get user → search → create playlist → add tracks).

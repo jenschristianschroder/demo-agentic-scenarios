@@ -53,16 +53,20 @@ async function spotifyFetch(
       errorMessage = errorBody;
     }
 
+    // Log full error details to help diagnose persistent issues
+    console.error(
+      `[Spotify API Error] ${options.method ?? 'GET'} ${url} → ${res.status}: ${errorMessage}`
+    );
+
     // Provide actionable guidance for 403 errors
     if (res.status === 403) {
       const hint =
-        'This usually means the Spotify app is in Development Mode and the current access token ' +
-        'was obtained before the user was added as an authorized user in the Spotify Developer Dashboard ' +
-        '(Settings → User Management). ' +
-        'Please disconnect and reconnect to Spotify to re-authorize with updated permissions.';
-      const err = new Error(`Spotify API 403 Forbidden: ${errorMessage}. ${hint}`);
-      (err as Error & { requiresReauth: boolean }).requiresReauth = true;
-      lastError = err;
+        'This usually means the access token does not have the required scopes (e.g. playlist-modify-public, playlist-modify-private). ' +
+        'Common causes:\n' +
+        '1. The OAuth scope parameter was not encoded correctly (spaces must be %20, not +).\n' +
+        '2. The user needs to disconnect and reconnect to Spotify to obtain a fresh token with the correct scopes.\n' +
+        '3. If the Spotify app is in Development Mode, verify the user is listed under Settings → User Management in the Spotify Developer Dashboard.';
+      lastError = new Error(`Spotify API 403 Forbidden: ${errorMessage}. ${hint}`);
     } else {
       lastError = new Error(`Spotify API ${res.status}: ${errorMessage}`);
     }
@@ -294,10 +298,6 @@ export async function executeSpotifyTool(
         return { error: `Unknown Spotify tool: ${name}` };
     }
   } catch (err) {
-    const result: Record<string, unknown> = { error: err instanceof Error ? err.message : 'Spotify API call failed' };
-    if (err instanceof Error && (err as Error & { requiresReauth?: boolean }).requiresReauth) {
-      result.requiresReauth = true;
-    }
-    return result;
+    return { error: err instanceof Error ? err.message : 'Spotify API call failed' };
   }
 }
