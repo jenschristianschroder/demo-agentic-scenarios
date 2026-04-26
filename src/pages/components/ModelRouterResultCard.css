@@ -1,0 +1,129 @@
+/* ─── Model Router Result Card ─────────────────────────────── */
+
+.mr-result-card {
+  display: flex;
+  flex-direction: column;
+  background: #fafafa;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 12px;
+  overflow: hidden;
+  flex: 1;
+  min-width: 0;
+}
+
+.mr-result-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 2.5px solid #1565c0;
+  background: #ffffff;
+}
+
+.mr-result-card-icon {
+  font-size: 1.25rem;
+}
+
+.mr-result-card-label {
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #333333;
+}
+
+.mr-result-card-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 1;
+}
+
+/* ─── Meta (model, latency, tokens) ────────────────────────── */
+
+.mr-result-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mr-result-meta-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px;
+  background: #ffffff;
+  border: 1px solid #eeeeee;
+  border-radius: 6px;
+}
+
+.mr-meta-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #888888;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.mr-meta-value {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #111111;
+  font-family: 'Menlo', 'Consolas', monospace;
+}
+
+.mr-meta-model {
+  color: #1565c0;
+}
+
+/* ─── Response ─────────────────────────────────────────────── */
+
+.mr-result-response {
+  font-size: 0.875rem;
+  color: #222222;
+  line-height: 1.6;
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 12px;
+  background: #ffffff;
+  border: 1px solid #eeeeee;
+  border-radius: 8px;
+}
+
+.mr-result-response p {
+  margin: 0 0 8px;
+}
+
+.mr-result-response p:last-child {
+  margin-bottom: 0;
+}
+
+/* ─── States ───────────────────────────────────────────────── */
+
+.mr-result-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 40px 0;
+}
+
+.mr-result-error {
+  padding: 12px;
+  font-size: 0.8125rem;
+  color: #c62828;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.mr-result-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 0;
+  font-size: 0.8125rem;
+  color: #aaaaaa;
+}

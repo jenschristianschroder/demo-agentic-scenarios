@@ -7,6 +7,7 @@ import { AzureOpenAI } from 'openai';
 const AZURE_OPENAI_ENDPOINT = process.env.AZURE_OPENAI_ENDPOINT;
 const AZURE_OPENAI_DEPLOYMENT = process.env.AZURE_OPENAI_DEPLOYMENT || 'gpt-4o';
 const AZURE_OPENAI_REASONING_DEPLOYMENT = process.env.AZURE_OPENAI_REASONING_DEPLOYMENT;
+const AZURE_OPENAI_MODEL_ROUTER_DEPLOYMENT = process.env.AZURE_OPENAI_MODEL_ROUTER_DEPLOYMENT || 'model-router';
 
 if (!AZURE_OPENAI_ENDPOINT) {
   throw new Error('AZURE_OPENAI_ENDPOINT environment variable is required');
@@ -63,6 +64,35 @@ export function getReasoningClient(): AzureOpenAI | undefined {
 
 export function getReasoningDeployment(): string | undefined {
   return AZURE_OPENAI_REASONING_DEPLOYMENT;
+}
+
+// ─── Singleton Model Router client ───────────────────────────────────────────
+
+let modelRouterClient: AzureOpenAI | undefined;
+
+/**
+ * Returns the Azure OpenAI client configured for the model-router deployment.
+ * The model router intelligently routes prompts to the best-suited model based
+ * on the routing mode (balanced, quality, cost).
+ */
+export function getModelRouterClient(): AzureOpenAI {
+  if (!modelRouterClient) {
+    modelRouterClient = new AzureOpenAI({
+      azureADTokenProvider,
+      endpoint: AZURE_OPENAI_ENDPOINT,
+      deployment: AZURE_OPENAI_MODEL_ROUTER_DEPLOYMENT,
+      apiVersion: '2024-12-01-preview',
+    });
+  }
+  return modelRouterClient;
+}
+
+export function getModelRouterDeployment(): string {
+  return AZURE_OPENAI_MODEL_ROUTER_DEPLOYMENT;
+}
+
+export function isModelRouterConfigured(): boolean {
+  return !!AZURE_OPENAI_MODEL_ROUTER_DEPLOYMENT;
 }
 
 // ─── Singleton Search client ─────────────────────────────────────────────────

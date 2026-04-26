@@ -121,7 +121,7 @@ export const STEP_LABELS: Record<AgentStep, string> = {
 
 // ─── Scenario / Features definitions ─────────────────────────────────────────
 
-export type ScenarioId = 'multi-agent-orchestration' | 'rag-pipeline' | 'tool-use' | 'rag-failure-recovery' | 'sales-proposal' | 'smart-home-bundle' | 'spotify-playlists';
+export type ScenarioId = 'multi-agent-orchestration' | 'rag-pipeline' | 'tool-use' | 'rag-failure-recovery' | 'sales-proposal' | 'smart-home-bundle' | 'spotify-playlists' | 'model-router';
 
 export interface ScenarioInfo {
   id: ScenarioId;
@@ -187,6 +187,14 @@ export const SCENARIOS: ScenarioInfo[] = [
       'An AI agent that connects to your Spotify account to search tracks, create playlists, and manage your music library',
     icon: '🎵',
     route: '/spotify-demo',
+  },
+  {
+    id: 'model-router',
+    label: 'Model Router',
+    description:
+      'Send the same prompt through three routing modes — balanced, quality, and cost — and compare which model is selected, response quality, latency, and token usage side by side',
+    icon: '🔀',
+    route: '/model-router-demo',
   },
 ];
 
@@ -532,4 +540,42 @@ export interface SpotifyRequest {
   creativityLevel: number;
   accessToken: string;
   maxToolCalls?: number;
+}
+
+// ─── Model Router Contracts ─────────────────────────────────────────────────
+
+export type ModelRouterRoutingMode = 'balanced' | 'quality' | 'cost';
+
+export type ModelRouterStep = 'user-request' | 'routing' | 'result';
+
+export const MODEL_ROUTER_STEP_LABELS: Record<ModelRouterStep, string> = {
+  'user-request': 'Prompt',
+  routing: 'Routing',
+  result: 'Result',
+};
+
+export interface ModelRouterRequest {
+  prompt: string;
+  creativityLevel: number;
+  routingMode: ModelRouterRoutingMode;
+}
+
+export interface ModelRouterResult {
+  routingMode: ModelRouterRoutingMode;
+  modelUsed: string;
+  responseText: string;
+  latencyMs: number;
+  promptTokens: number;
+  completionTokens: number;
+}
+
+export interface ModelRouterEvent {
+  type: 'step-start' | 'step-complete' | 'error' | 'done';
+  step: ModelRouterStep;
+  timestamp: string;
+  data:
+    | ModelRouterResult
+    | { prompt: string }
+    | { message: string }
+    | null;
 }
