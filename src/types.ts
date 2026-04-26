@@ -262,7 +262,7 @@ export interface ToolEvent {
   data:
     | { message: string }
     | { prompt: string }
-    | { tools: ToolDefinition[] }
+    | { tools: ToolDefinition[]; model?: string }
     | { text: string }
     | ToolCallRecord
     | { text: string; toolCalls: ToolCallRecord[] }

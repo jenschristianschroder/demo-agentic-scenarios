@@ -20,6 +20,26 @@
   color: #111111;
 }
 
+.spotify-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.spotify-model-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #6d28d9;
+  background: #f3e8ff;
+  border: 1px solid #c4b5fd;
+  border-radius: 12px;
+  letter-spacing: 0.02em;
+}
+
 .spotify-content {
   flex: 1;
   display: flex;
