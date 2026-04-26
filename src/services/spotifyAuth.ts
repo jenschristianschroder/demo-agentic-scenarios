@@ -175,12 +175,22 @@ interface TokenResponse {
   access_token: string;
   refresh_token?: string;
   expires_in: number;
+  scope?: string;
 }
+
+/** Scopes required for full playlist management functionality */
+const REQUIRED_SCOPES = [
+  'playlist-modify-public',
+  'playlist-modify-private',
+];
 
 function saveTokens(data: TokenResponse): void {
   localStorage.setItem('spotify_access_token', data.access_token);
   if (data.refresh_token) {
     localStorage.setItem('spotify_refresh_token', data.refresh_token);
+  }
+  if (data.scope) {
+    localStorage.setItem('spotify_granted_scopes', data.scope);
   }
   // Store expiry time (current time + expires_in seconds, minus buffer)
   const expiresAt = Date.now() + (data.expires_in - TOKEN_REFRESH_BUFFER_SECONDS) * 1000;
@@ -261,8 +271,27 @@ export function clearTokens(): void {
   localStorage.removeItem('spotify_access_token');
   localStorage.removeItem('spotify_refresh_token');
   localStorage.removeItem('spotify_token_expires_at');
+  localStorage.removeItem('spotify_granted_scopes');
   localStorage.removeItem('spotify_code_verifier');
   localStorage.removeItem('spotify_auth_state');
+}
+
+/**
+ * Get the list of scopes that were granted by Spotify but are required and missing.
+ * Returns an empty array if all required scopes are present.
+ */
+export function getMissingScopes(): string[] {
+  const granted = localStorage.getItem('spotify_granted_scopes');
+  if (!granted) return []; // No scope info available — can't check
+  const grantedSet = new Set(granted.split(' '));
+  return REQUIRED_SCOPES.filter((s) => !grantedSet.has(s));
+}
+
+/**
+ * Get the scopes that were granted by Spotify during authorization.
+ */
+export function getGrantedScopes(): string | null {
+  return localStorage.getItem('spotify_granted_scopes');
 }
 
 /**

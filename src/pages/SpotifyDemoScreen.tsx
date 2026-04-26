@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import type { ToolStep, ToolEvent, ToolCallRecord, ToolDefinition, SpotifyRequest } from '../types';
 import { runSpotifyAgent } from '../services/spotifyApi';
-import { startSpotifyLogin, getAccessToken, isSpotifyAuthenticated, clearTokens, fetchSpotifyProfile } from '../services/spotifyAuth';
+import { startSpotifyLogin, getAccessToken, isSpotifyAuthenticated, clearTokens, fetchSpotifyProfile, getMissingScopes } from '../services/spotifyAuth';
 import type { SpotifyUserProfile } from '../services/spotifyAuth';
 import ToolPipelineView from './components/ToolPipelineView';
 import ToolInventory from './components/ToolInventory';
@@ -14,12 +14,16 @@ const SpotifyDemoScreen: React.FC = () => {
   const [authenticated, setAuthenticated] = useState(isSpotifyAuthenticated());
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [userProfile, setUserProfile] = useState<SpotifyUserProfile | null>(null);
+  const [missingScopes, setMissingScopes] = useState<string[]>([]);
 
   useEffect(() => {
     if (authenticated) {
       getAccessToken().then((token) => {
         if (token) {
           setAccessToken(token);
+          // Check for missing scopes
+          const missing = getMissingScopes();
+          setMissingScopes(missing);
           // Validate token and fetch user profile
           fetchSpotifyProfile(token)
             .then((profile) => setUserProfile(profile))
@@ -30,10 +34,12 @@ const SpotifyDemoScreen: React.FC = () => {
               setAuthenticated(false);
               setAccessToken(null);
               setUserProfile(null);
+              setMissingScopes([]);
             });
         } else {
           setAuthenticated(false);
           setUserProfile(null);
+          setMissingScopes([]);
         }
       });
     }
@@ -52,6 +58,7 @@ const SpotifyDemoScreen: React.FC = () => {
     setAuthenticated(false);
     setAccessToken(null);
     setUserProfile(null);
+    setMissingScopes([]);
   }, []);
 
   // ─── Controls state ───────────────────────────────────────────────────────
@@ -130,6 +137,7 @@ const SpotifyDemoScreen: React.FC = () => {
             setAuthenticated(false);
             setAccessToken(null);
             setUserProfile(null);
+            setMissingScopes([]);
             setError(
               'Your Spotify session needs to be re-authorized. This usually happens when your account was recently added as an authorized user. Please reconnect to Spotify.'
             );
@@ -215,6 +223,37 @@ const SpotifyDemoScreen: React.FC = () => {
             <button className="spotify-connect-btn spotify-connect-btn-lg" onClick={handleConnect} type="button">
               Connect to Spotify
             </button>
+          </div>
+        )}
+
+        {/* ── Missing scopes warning ─────────────────────────────── */}
+        {authenticated && missingScopes.length > 0 && (
+          <div className="spotify-error" style={{ marginBottom: 16 }}>
+            <strong>⚠️ Missing Spotify permissions:</strong> Your token is missing the following
+            required scopes: <code>{missingScopes.join(', ')}</code>.
+            <br />
+            This typically means your Spotify app is in <strong>Development Mode</strong> and your
+            account may not be properly added as a test user in the{' '}
+            <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener noreferrer">
+              Spotify Developer Dashboard
+            </a>{' '}
+            (Settings → User Management). Please verify your account is listed, then{' '}
+            <button
+              type="button"
+              onClick={handleDisconnect}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'inherit',
+                textDecoration: 'underline',
+                cursor: 'pointer',
+                padding: 0,
+                font: 'inherit',
+              }}
+            >
+              disconnect
+            </button>{' '}
+            and reconnect to re-authorize.
           </div>
         )}
 
