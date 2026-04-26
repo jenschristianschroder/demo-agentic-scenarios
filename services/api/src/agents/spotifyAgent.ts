@@ -128,6 +128,22 @@ const TOOLS: ChatCompletionTool[] = [
       },
     },
   },
+  {
+    type: 'function',
+    function: {
+      name: 'web_search',
+      description: 'Search the web for information about artists, genres, moods, curated track lists, or any music-related topic. Use this to research the user\'s request before querying Spotify, so you can build better playlists with richer context.',
+      parameters: {
+        type: 'object',
+        properties: {
+          query: { type: 'string', description: 'Search query (e.g. "best tracks for morning run playlist", "top 90s hip-hop artists")' },
+          count: { type: 'number', description: 'Number of results to return (default: 5, max: 10)' },
+        },
+        required: ['query'],
+        additionalProperties: false,
+      },
+    },
+  },
 ];
 
 /** Tool definitions for the UI (without the JSON Schema details) */
@@ -141,11 +157,13 @@ const SYSTEM_PROMPT = `You are a Spotify music curator and playlist manager. You
 
 IMPORTANT RULES:
 - Use the tools to interact with Spotify on behalf of the user. Do NOT make up track names, IDs, or URIs.
-- When adding tracks to a playlist, first search for tracks using search_tracks to obtain valid track URIs.
+- When the user asks about a genre, mood, artist, activity, or any music topic, start by calling web_search to gather context (e.g. well-known tracks, key artists, characteristics of the genre). Use this research to craft better Spotify search queries.
+- When adding tracks to a playlist, always use search_tracks to obtain valid track URIs.
 - When the user asks you to create a playlist with tracks, follow this workflow:
-  1. search_tracks (run multiple queries to gather enough diverse tracks)
-  2. create_playlist → get playlist_id
-  3. add_tracks_to_playlist → add the tracks
+  1. web_search (research the genre/mood/theme to identify key artists and tracks)
+  2. search_tracks (run multiple targeted queries based on your research to gather diverse tracks)
+  3. create_playlist → get playlist_id
+  4. add_tracks_to_playlist → add the tracks
 - Use multiple search_tracks calls with varied queries (e.g. by mood, genre, artist, tempo descriptor) to build a full and diverse track list.
 - When the user mentions a genre or mood, craft search queries that match (e.g. "energetic rock workout", "calm jazz piano").
 - Always provide a clear, well-formatted final answer summarizing what you did, including playlist names, track lists, and links when available.
@@ -153,8 +171,8 @@ IMPORTANT RULES:
 - If a 403 Forbidden error occurs on a write operation (creating playlists, adding/removing tracks), explain that the access token likely lacks the required scopes (playlist-modify-public / playlist-modify-private). The most common fix is to disconnect and reconnect to Spotify to obtain a fresh token. If the Spotify app is in Development Mode, the user may also need to be added under Settings → User Management in the Spotify Developer Dashboard.`;
 
 // Higher than the default 10 because Spotify workflows often require several
-// sequential steps (get user → search → create playlist → add tracks).
-const MAX_TOOL_ROUNDS = 15;
+// sequential steps (web search → search tracks → create playlist → add tracks).
+const MAX_TOOL_ROUNDS = 20;
 
 /**
  * Run the Spotify playlist agent, streaming events via SSE.

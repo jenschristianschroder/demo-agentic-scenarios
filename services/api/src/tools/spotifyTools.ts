@@ -238,6 +238,55 @@ export async function removeTracksFromPlaylist(
   });
 }
 
+// ─── Tool: web_search ────────────────────────────────────────────────────────
+// Uses the Tavily Search API to research music topics (artists, genres, curated
+// track lists, etc.) from the web, enriching the agent's context before
+// querying Spotify. Requires the TAVILY_API_KEY environment variable.
+
+const TAVILY_API_URL = 'https://api.tavily.com/search';
+
+export async function webSearch(args: { query: string; count?: number }): Promise<unknown> {
+  const apiKey = process.env.TAVILY_API_KEY;
+  if (!apiKey) {
+    return { error: 'Web search is unavailable: TAVILY_API_KEY is not configured.' };
+  }
+
+  const maxResults = Math.min(args.count ?? 5, 10);
+
+  let res: globalThis.Response;
+  try {
+    res = await fetch(TAVILY_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        api_key: apiKey,
+        query: args.query,
+        search_depth: 'basic',
+        max_results: maxResults,
+      }),
+    });
+  } catch (err) {
+    return { error: `Web search network error: ${err instanceof Error ? err.message : String(err)}` };
+  }
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    return { error: `Tavily search failed (${res.status}): ${body}` };
+  }
+
+  const data = (await res.json()) as {
+    results?: Array<{ title?: string; url?: string; content?: string }>;
+  };
+
+  return {
+    results: (data.results ?? []).map((r) => ({
+      title: r.title ?? '',
+      url: r.url ?? '',
+      snippet: r.content ?? '',
+    })),
+  };
+}
+
 // ─── Tool dispatcher ─────────────────────────────────────────────────────────
 
 export async function executeSpotifyTool(
@@ -261,6 +310,8 @@ export async function executeSpotifyTool(
         return await addTracksToPlaylist(token, args as Parameters<typeof addTracksToPlaylist>[1]);
       case 'remove_tracks_from_playlist':
         return await removeTracksFromPlaylist(token, args as Parameters<typeof removeTracksFromPlaylist>[1]);
+      case 'web_search':
+        return await webSearch(args as Parameters<typeof webSearch>[0]);
       default:
         return { error: `Unknown Spotify tool: ${name}` };
     }
