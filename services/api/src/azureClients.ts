@@ -110,7 +110,7 @@ export function getImageClient(): AzureOpenAI {
       azureADTokenProvider,
       endpoint: AZURE_OPENAI_ENDPOINT,
       deployment: AZURE_OPENAI_IMAGE_DEPLOYMENT,
-      apiVersion: '2024-02-01',
+      apiVersion: '2025-04-01-preview',
     });
   }
   return imageClient;
