@@ -16,7 +16,7 @@ import './ImageGenDemoScreen.css';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
-const STYLES = ['Photorealistic', 'Illustration', 'Digital Art', 'Oil Painting', 'Watercolour', 'Cinematic'];
+const STYLES = ['Photorealistic', 'Illustration', 'Digital Art', 'Oil Painting', 'Watercolor', 'Cinematic'];
 
 const SIZE_OPTIONS: { label: string; value: ImageSize }[] = [
   { label: 'Square', value: '1024x1024' },
