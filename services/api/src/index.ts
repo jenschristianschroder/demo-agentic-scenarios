@@ -3,6 +3,7 @@ import cors from 'cors';
 import { orchestrationRouter } from './routes/orchestration.js';
 import { ragRouter } from './routes/rag.js';
 import { toolsRouter } from './routes/tools.js';
+import { spotifyRouter } from './routes/spotify.js';
 import { healthRouter } from './routes/health.js';
 
 const app = express();
@@ -15,6 +16,7 @@ app.use(express.json({ limit: '100kb' }));
 app.use('/api/orchestration', orchestrationRouter);
 app.use('/api/rag', ragRouter);
 app.use('/api/tools', toolsRouter);
+app.use('/api/spotify', spotifyRouter);
 app.use('/health', healthRouter);
 
 app.listen(PORT, () => {

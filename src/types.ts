@@ -98,7 +98,7 @@ export const STEP_LABELS: Record<AgentStep, string> = {
 
 // ─── Scenario / Features definitions ─────────────────────────────────────────
 
-export type ScenarioId = 'multi-agent-orchestration' | 'rag-pipeline' | 'tool-use';
+export type ScenarioId = 'multi-agent-orchestration' | 'rag-pipeline' | 'tool-use' | 'spotify-playlists';
 
 export interface ScenarioInfo {
   id: ScenarioId;
@@ -132,6 +132,14 @@ export const SCENARIOS: ScenarioInfo[] = [
       'An orchestrator coordinates content generation and fact-checking agents in an iterative loop with real-time visibility',
     icon: '🤖',
     route: '/demo',
+  },
+  {
+    id: 'spotify-playlists',
+    label: 'Spotify Playlist Agent',
+    description:
+      'An AI agent that connects to your Spotify account to search tracks, create playlists, and manage your music library',
+    icon: '🎵',
+    route: '/spotify-demo',
   },
 ];
 
@@ -212,4 +220,12 @@ export interface ToolEvent {
 export interface ToolRequest {
   prompt: string;
   creativityLevel: number;
+}
+
+// ─── Spotify Playlist Agent Contracts ────────────────────────────────────────
+
+export interface SpotifyRequest {
+  prompt: string;
+  creativityLevel: number;
+  accessToken: string;
 }

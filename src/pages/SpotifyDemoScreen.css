@@ -1,0 +1,190 @@
+/* ─── Spotify Demo Screen Layout ──────────────────────────── */
+
+.spotify-screen {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 48px;
+}
+
+.spotify-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+}
+
+.spotify-header-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111111;
+}
+
+.spotify-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding-top: 8px;
+}
+
+/* ─── Auth section ─────────────────────────────────────────── */
+
+.spotify-auth-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.spotify-connect-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  border: none;
+  border-radius: 24px;
+  background: #1DB954;
+  color: #fff;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.spotify-connect-btn:hover {
+  background: #1aa34a;
+}
+
+.spotify-connect-btn-lg {
+  padding: 12px 32px;
+  font-size: 0.9375rem;
+}
+
+.spotify-disconnect-btn {
+  padding: 8px 18px;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 24px;
+  background: transparent;
+  color: #666;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.spotify-disconnect-btn:hover {
+  border-color: #c62828;
+  color: #c62828;
+}
+
+/* ─── Auth gate (not connected) ────────────────────────────── */
+
+.spotify-auth-gate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 64px 24px;
+  text-align: center;
+}
+
+.spotify-auth-gate-icon {
+  opacity: 0.85;
+}
+
+.spotify-auth-gate-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #111;
+}
+
+.spotify-auth-gate-desc {
+  margin: 0;
+  max-width: 420px;
+  font-size: 0.875rem;
+  color: #666;
+  line-height: 1.6;
+}
+
+/* ─── Controls ─────────────────────────────────────────────── */
+
+.spotify-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  background: #fafafa;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 12px;
+}
+
+.spotify-controls-row {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.spotify-run-btn {
+  background: #1DB954;
+}
+
+.spotify-run-btn:hover:not(:disabled) {
+  background: #1aa34a;
+}
+
+/* ─── Error ────────────────────────────────────────────────── */
+
+.spotify-error {
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 0.875rem;
+  color: #c62828;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  text-align: center;
+}
+
+/* ─── Response ─────────────────────────────────────────────── */
+
+.spotify-response {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  background: #fafafa;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 12px;
+}
+
+.spotify-response-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #666666;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.spotify-response-badge {
+  font-size: 0.625rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #1a5e2e;
+  background: #dcfce7;
+  border: 1px solid #86efac;
+}
+
+.spotify-response-text {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  color: #222222;
+  white-space: pre-wrap;
+}
