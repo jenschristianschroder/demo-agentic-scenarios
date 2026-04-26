@@ -5,6 +5,8 @@ import { ragRouter } from './routes/rag.js';
 import { toolsRouter } from './routes/tools.js';
 import { spotifyRouter } from './routes/spotify.js';
 import { healthRouter } from './routes/health.js';
+import { salesProposalRouter } from './routes/salesProposal.js';
+import { smartHomeRouter } from './routes/smartHome.js';
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '3001', 10);
@@ -16,6 +18,8 @@ app.use(express.json({ limit: '100kb' }));
 app.use('/api/orchestration', orchestrationRouter);
 app.use('/api/rag', ragRouter);
 app.use('/api/tools', toolsRouter);
+app.use('/api/sales-proposal', salesProposalRouter);
+app.use('/api/smart-home', smartHomeRouter);
 app.use('/api/spotify', spotifyRouter);
 app.use('/health', healthRouter);
 

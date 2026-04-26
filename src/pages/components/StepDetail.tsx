@@ -4,6 +4,7 @@ import type {
   GeneratorOutput,
   FactCheckerOutput,
   OrchestratorDecision,
+  RevisionOutput,
   RunSummary,
   IterationRecord,
 } from '../../types';
@@ -12,7 +13,7 @@ import './StepDetail.css';
 
 interface StepDetailProps {
   step: AgentStep;
-  data: GeneratorOutput | FactCheckerOutput | OrchestratorDecision | RunSummary | { prompt: string } | null;
+  data: GeneratorOutput | FactCheckerOutput | OrchestratorDecision | RevisionOutput | RunSummary | { prompt: string } | null;
   iterations: IterationRecord[];
 }
 
@@ -147,6 +148,25 @@ const StepDetail: React.FC<StepDetailProps> = ({ step, data, iterations }) => {
           </>
         )}
 
+        {step === 'revision' && 'revisedText' in data && (
+          <>
+            <div className="detail-section">
+              <span className="detail-label">
+                Revised Text <span className="detail-badge">Iteration {(data as RevisionOutput).iteration}</span>
+              </span>
+              <p className="detail-text output-area">{(data as RevisionOutput).revisedText}</p>
+            </div>
+            <div className="detail-section">
+              <span className="detail-label">Changes Applied</span>
+              <ul className="changes-list">
+                {(data as RevisionOutput).changesApplied.map((change, i) => (
+                  <li key={i} className="change-item">{change}</li>
+                ))}
+              </ul>
+            </div>
+          </>
+        )}
+
         {step === 'final-answer' && 'finalText' in data && (
           <div className="detail-section">
             <span className="detail-label">Final Answer</span>
@@ -155,7 +175,7 @@ const StepDetail: React.FC<StepDetailProps> = ({ step, data, iterations }) => {
         )}
 
         {/* Iteration history */}
-        {iterations.length > 1 && (step === 'generator' || step === 'fact-checker') && (
+        {iterations.length > 1 && (step === 'generator' || step === 'fact-checker' || step === 'revision') && (
           <div className="detail-section">
             <span className="detail-label">Iteration History</span>
             <div className="iteration-tabs">

@@ -237,3 +237,28 @@
 .iter-verdict-approved { color: #2e7d32; }
 .iter-verdict-needs-revision { color: #e65100; }
 .iter-verdict-rejected { color: #b71c1c; }
+
+/* ─── Changes List (Revision Agent) ────────────────────────── */
+
+.changes-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0;
+  margin: 0;
+}
+
+.change-item {
+  font-size: 0.8125rem;
+  color: #0d47a1;
+  padding: 8px 12px;
+  background: #e3f2fd;
+  border: 1px solid #bbdefb;
+  border-radius: 6px;
+  line-height: 1.4;
+}
+
+.change-item::before {
+  content: '✎ ';
+}

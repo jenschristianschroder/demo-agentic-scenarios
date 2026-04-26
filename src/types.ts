@@ -9,6 +9,7 @@ export type AgentStep =
   | 'orchestrator'
   | 'generator'
   | 'fact-checker'
+  | 'revision'
   | 'final-answer';
 
 /** Fact-check status for a single claim */
@@ -38,6 +39,22 @@ export interface FactCheckerOutput {
   evidenceReferences: string[];
 }
 
+/** Inter-agent communication message */
+export interface AgentMessage {
+  from: AgentStep;
+  to: AgentStep;
+  message: string;
+  timestamp: string;
+  type: 'finding' | 'instruction' | 'confirmation' | 'handoff';
+}
+
+/** Revision agent output */
+export interface RevisionOutput {
+  revisedText: string;
+  changesApplied: string[];
+  iteration: number;
+}
+
 /** Orchestrator decision record */
 export interface OrchestratorDecision {
   action: 'generate' | 'fact-check' | 'revise' | 'approve' | 'reject';
@@ -51,7 +68,9 @@ export interface IterationRecord {
   iteration: number;
   generatorOutput: GeneratorOutput;
   factCheckerOutput?: FactCheckerOutput;
+  revisionOutput?: RevisionOutput;
   orchestratorDecision?: OrchestratorDecision;
+  agentMessages?: AgentMessage[];
 }
 
 /** Final run summary */
@@ -66,14 +85,16 @@ export interface RunSummary {
 
 /** SSE event streamed from the backend during orchestration */
 export interface OrchestrationEvent {
-  type: 'step-start' | 'step-complete' | 'run-complete' | 'error';
+  type: 'step-start' | 'step-complete' | 'run-complete' | 'agent-message' | 'error';
   step: AgentStep;
   timestamp: string;
   data:
     | OrchestratorDecision
     | GeneratorOutput
     | FactCheckerOutput
+    | RevisionOutput
     | RunSummary
+    | AgentMessage
     | { message: string };
 }
 
@@ -85,6 +106,7 @@ export interface OrchestrationRequest {
   acceptanceThreshold: number;
   maxIterations: number;
   generatorKnowledgeSource: boolean;
+  scenario?: 'default' | 'rag-failure-recovery';
 }
 
 /** Step labels for display */
@@ -93,12 +115,13 @@ export const STEP_LABELS: Record<AgentStep, string> = {
   orchestrator: 'Orchestrator',
   generator: 'Generator',
   'fact-checker': 'Fact Checker',
+  revision: 'Revision Agent',
   'final-answer': 'Final Answer',
 };
 
 // ─── Scenario / Features definitions ─────────────────────────────────────────
 
-export type ScenarioId = 'multi-agent-orchestration' | 'rag-pipeline' | 'tool-use' | 'spotify-playlists';
+export type ScenarioId = 'multi-agent-orchestration' | 'rag-pipeline' | 'tool-use' | 'rag-failure-recovery' | 'sales-proposal' | 'smart-home-bundle' | 'spotify-playlists';
 
 export interface ScenarioInfo {
   id: ScenarioId;
@@ -132,6 +155,30 @@ export const SCENARIOS: ScenarioInfo[] = [
       'An orchestrator coordinates content generation and fact-checking agents in an iterative loop with real-time visibility',
     icon: '🤖',
     route: '/demo',
+  },
+  {
+    id: 'rag-failure-recovery',
+    label: 'RAG Failure & Recovery',
+    description:
+      'Watch the system detect hallucinated product claims, retrieve real catalog facts, and rewrite until grounded',
+    icon: '🔍',
+    route: '/rag-failure-demo',
+  },
+  {
+    id: 'sales-proposal',
+    label: 'Sales Proposal Team',
+    description:
+      'Specialized agents collaborate to build a business laptop proposal — balancing budget, specs, warranty, and support constraints',
+    icon: '📋',
+    route: '/sales-proposal-demo',
+  },
+  {
+    id: 'smart-home-bundle',
+    label: 'Smart Home Bundle Builder',
+    description:
+      'Agents recommend, review privacy, check compatibility, and assemble a smart home bundle — with approvals, objections, and conditions',
+    icon: '🏠',
+    route: '/smart-home-demo',
   },
   {
     id: 'spotify-playlists',
@@ -218,6 +265,257 @@ export interface ToolEvent {
 }
 
 export interface ToolRequest {
+  prompt: string;
+  creativityLevel: number;
+}
+
+// ─── Sales Proposal Team Contracts ───────────────────────────────────────────
+
+export type ProposalAgentRole =
+  | 'orchestrator'
+  | 'customer-intake'
+  | 'product-specialist'
+  | 'pricing'
+  | 'support-warranty'
+  | 'proposal-writer';
+
+export const PROPOSAL_AGENT_LABELS: Record<ProposalAgentRole, string> = {
+  orchestrator: 'Orchestrator',
+  'customer-intake': 'Customer Intake',
+  'product-specialist': 'Product Specialist',
+  pricing: 'Pricing Agent',
+  'support-warranty': 'Support & Warranty',
+  'proposal-writer': 'Proposal Writer',
+};
+
+export type ProposalStep =
+  | 'user-request'
+  | 'customer-intake'
+  | 'product-search'
+  | 'pricing'
+  | 'support-check'
+  | 'proposal-draft'
+  | 'final-proposal';
+
+export const PROPOSAL_STEP_LABELS: Record<ProposalStep, string> = {
+  'user-request': 'Customer Request',
+  'customer-intake': 'Intake',
+  'product-search': 'Product Search',
+  pricing: 'Pricing',
+  'support-check': 'Support Check',
+  'proposal-draft': 'Proposal Draft',
+  'final-proposal': 'Final Proposal',
+};
+
+export interface CustomerRequirements {
+  quantity: number;
+  budgetDKK: number;
+  useCase: string;
+  priorities: string[];
+  warrantyNeeds: string;
+  additionalNotes: string;
+}
+
+export interface ProductCandidate {
+  name: string;
+  category: string;
+  priceDKK: number;
+  keySpecs: string;
+  batteryLife: string;
+  weight: string;
+  warranty: string;
+  fitScore: number;
+  fitReason: string;
+}
+
+export interface PricingResult {
+  productName: string;
+  unitPriceDKK: number;
+  quantity: number;
+  totalDKK: number;
+  budgetDKK: number;
+  withinBudget: boolean;
+  budgetDelta: number;
+  accessories?: string;
+}
+
+export interface SupportAssessment {
+  productName: string;
+  warrantyType: string;
+  warrantyDuration: string;
+  businessSupport: boolean;
+  onsiteService: boolean;
+  replacementTerms: string;
+  suitability: 'recommended' | 'acceptable' | 'not-recommended';
+  concerns: string[];
+}
+
+export interface ProposalAgentMessage {
+  from: ProposalAgentRole | 'user';
+  to: ProposalAgentRole;
+  message: string;
+  timestamp: string;
+  type: 'instruction' | 'finding' | 'concern' | 'recommendation' | 'handoff';
+}
+
+export interface ProposalEvent {
+  type: 'step-start' | 'step-complete' | 'agent-message' | 'run-complete' | 'error';
+  step: ProposalStep;
+  timestamp: string;
+  data:
+    | CustomerRequirements
+    | ProductCandidate[]
+    | PricingResult
+    | SupportAssessment
+    | ProposalAgentMessage
+    | { text: string }
+    | { message: string }
+    | ProposalSummary
+    | null;
+}
+
+export interface ProposalSummary {
+  recommendedProduct: string;
+  alternativeProduct?: string;
+  totalCost: number;
+  budgetDKK: number;
+  withinBudget: boolean;
+  warrantyOk: boolean;
+  proposalText: string;
+  tradeOffs: string[];
+  agentMessages: ProposalAgentMessage[];
+}
+
+export interface ProposalRequest {
+  prompt: string;
+  creativityLevel: number;
+}
+
+// ─── Smart Home Bundle Builder Contracts ─────────────────────────────────────
+
+export type SmartHomeAgentRole =
+  | 'orchestrator'
+  | 'needs-agent'
+  | 'device-agent'
+  | 'privacy-agent'
+  | 'compatibility-agent'
+  | 'bundle-agent';
+
+export const SMART_HOME_AGENT_LABELS: Record<SmartHomeAgentRole, string> = {
+  orchestrator: 'Orchestrator',
+  'needs-agent': 'Needs Agent',
+  'device-agent': 'Device Agent',
+  'privacy-agent': 'Privacy/Safety Agent',
+  'compatibility-agent': 'Compatibility Agent',
+  'bundle-agent': 'Bundle Agent',
+};
+
+export type SmartHomeStep =
+  | 'user-request'
+  | 'needs-analysis'
+  | 'device-recommendation'
+  | 'privacy-review'
+  | 'compatibility-check'
+  | 'bundle-assembly'
+  | 'final-bundle';
+
+export const SMART_HOME_STEP_LABELS: Record<SmartHomeStep, string> = {
+  'user-request': 'Customer Request',
+  'needs-analysis': 'Needs Analysis',
+  'device-recommendation': 'Device Selection',
+  'privacy-review': 'Privacy Review',
+  'compatibility-check': 'Compatibility',
+  'bundle-assembly': 'Bundle Assembly',
+  'final-bundle': 'Final Bundle',
+};
+
+export interface HomeNeeds {
+  spaceType: string;
+  spaceSize: string;
+  privacyLevel: string;
+  budgetDKK: number;
+  priorities: string[];
+  additionalNotes: string;
+}
+
+export interface DeviceRecommendation {
+  name: string;
+  category: string;
+  priceDKK: number;
+  keyFeatures: string;
+  protocols: string[];
+  privacyFeatures: string[];
+  reason: string;
+}
+
+export interface PrivacyAssessment {
+  deviceName: string;
+  hasCamera: boolean;
+  hasMicrophone: boolean;
+  hasHardwareMuteSwitch: boolean;
+  hasPrivacyShutter: boolean;
+  localProcessing: boolean;
+  privacyRating: 'approved' | 'conditional' | 'rejected';
+  conditions: string[];
+  concerns: string[];
+}
+
+export interface CompatibilityResult {
+  deviceName: string;
+  protocols: string[];
+  matterSupport: boolean;
+  threadSupport: boolean;
+  zigbeeSupport: boolean;
+  wifiSupport: boolean;
+  hubRequired: boolean;
+  compatibleWith: string[];
+  issues: string[];
+}
+
+export interface BundleItem {
+  name: string;
+  quantity: number;
+  unitPriceDKK: number;
+  totalPriceDKK: number;
+}
+
+export interface SmartHomeBundleSummary {
+  bundleName: string;
+  items: BundleItem[];
+  totalPriceDKK: number;
+  budgetDKK: number;
+  withinBudget: boolean;
+  setupPlan: string;
+  privacyOk: boolean;
+  compatibilityOk: boolean;
+  agentMessages: SmartHomeAgentMessage[];
+}
+
+export interface SmartHomeAgentMessage {
+  from: SmartHomeAgentRole | 'user';
+  to: SmartHomeAgentRole;
+  message: string;
+  timestamp: string;
+  type: 'instruction' | 'finding' | 'concern' | 'approval' | 'condition' | 'recommendation' | 'handoff' | 'objection';
+}
+
+export interface SmartHomeEvent {
+  type: 'step-start' | 'step-complete' | 'agent-message' | 'run-complete' | 'error';
+  step: SmartHomeStep;
+  timestamp: string;
+  data:
+    | HomeNeeds
+    | DeviceRecommendation[]
+    | PrivacyAssessment
+    | CompatibilityResult[]
+    | SmartHomeAgentMessage
+    | SmartHomeBundleSummary
+    | { text: string }
+    | { message: string }
+    | null;
+}
+
+export interface SmartHomeRequest {
   prompt: string;
   creativityLevel: number;
 }

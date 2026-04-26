@@ -10,13 +10,23 @@ interface OrchestrationViewProps {
   iterations: IterationRecord[];
   isRunning: boolean;
   events: OrchestrationEvent[];
+  includeRevisionStep?: boolean;
 }
 
-const STEPS: AgentStep[] = [
+const DEFAULT_STEPS: AgentStep[] = [
   'user-request',
   'orchestrator',
   'generator',
   'fact-checker',
+  'final-answer',
+];
+
+const EXTENDED_STEPS: AgentStep[] = [
+  'user-request',
+  'orchestrator',
+  'generator',
+  'fact-checker',
+  'revision',
   'final-answer',
 ];
 
@@ -51,6 +61,13 @@ const StepIcon: React.FC<{ step: AgentStep }> = ({ step }) => {
           <polyline points="22 4 12 14.01 9 11.01" />
         </svg>
       );
+    case 'revision':
+      return (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+        </svg>
+      );
     case 'final-answer':
       return (
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -83,14 +100,17 @@ const OrchestrationView: React.FC<OrchestrationViewProps> = ({
   iterations,
   isRunning,
   events,
+  includeRevisionStep = false,
 }) => {
   if (!activeStep && events.length === 0) return null;
+
+  const steps = includeRevisionStep ? EXTENDED_STEPS : DEFAULT_STEPS;
 
   return (
     <div className="orchestration-view">
       <div className="orch-label">Orchestration Flow</div>
       <div className="orch-steps">
-        {STEPS.map((step, idx) => {
+        {steps.map((step, idx) => {
           const isActive = activeStep === step;
           const isSelected = selectedStep === step;
           const reached = isStepReached(step, events);

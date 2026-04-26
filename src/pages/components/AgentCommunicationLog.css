@@ -1,0 +1,164 @@
+/* ─── Agent Communication Log ──────────────────────────────── */
+
+.agent-comm-log {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  background: #fafafa;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 12px;
+}
+
+.agent-comm-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.agent-comm-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #666666;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.agent-comm-live {
+  font-size: 0.625rem;
+  font-weight: 700;
+  color: #ffffff;
+  background: #e53935;
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+  animation: comm-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes comm-pulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+.agent-comm-waiting {
+  font-size: 0.8125rem;
+  color: #999999;
+  font-style: italic;
+  padding: 8px 0;
+}
+
+.agent-comm-messages {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ─── Message bubbles ──────────────────────────────────────── */
+
+.agent-comm-bubble {
+  border-radius: 10px;
+  padding: 12px 16px;
+  border-left: 4px solid #ccc;
+  background: #ffffff;
+}
+
+.agent-comm-finding {
+  border-left-color: #e53935;
+  background: #fff5f5;
+}
+
+.agent-comm-instruction {
+  border-left-color: #0078d4;
+  background: #f0f7ff;
+}
+
+.agent-comm-confirmation {
+  border-left-color: #2e7d32;
+  background: #f0faf0;
+}
+
+.agent-comm-handoff {
+  border-left-color: #7b1fa2;
+  background: #f9f0ff;
+}
+
+.agent-comm-bubble-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.agent-comm-icon {
+  font-size: 1rem;
+}
+
+.agent-comm-route {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #333333;
+}
+
+.agent-comm-type-badge {
+  font-size: 0.625rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: auto;
+}
+
+.agent-comm-type-finding {
+  color: #c62828;
+  background: #ffebee;
+}
+
+.agent-comm-type-instruction {
+  color: #0d47a1;
+  background: #e3f2fd;
+}
+
+.agent-comm-type-confirmation {
+  color: #1b5e20;
+  background: #e8f5e9;
+}
+
+.agent-comm-type-handoff {
+  color: #4a148c;
+  background: #f3e5f5;
+}
+
+.agent-comm-bubble-body {
+  font-size: 0.8125rem;
+  color: #333333;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+/* ─── Explainer ────────────────────────────────────────────── */
+
+.agent-comm-explainer {
+  margin-top: 4px;
+}
+
+.agent-comm-explainer details {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: #fafafa;
+}
+
+.agent-comm-explainer summary {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #666666;
+  cursor: pointer;
+}
+
+.agent-comm-explainer p {
+  font-size: 0.8125rem;
+  color: #444444;
+  line-height: 1.5;
+  margin: 8px 0 0;
+}

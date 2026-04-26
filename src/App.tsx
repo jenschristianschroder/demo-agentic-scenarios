@@ -5,6 +5,9 @@ import FeaturesScreen from './pages/FeaturesScreen';
 import DemoScreen from './pages/DemoScreen';
 import RagDemoScreen from './pages/RagDemoScreen';
 import ToolDemoScreen from './pages/ToolDemoScreen';
+import RagFailureDemoScreen from './pages/RagFailureDemoScreen';
+import SalesProposalDemoScreen from './pages/SalesProposalDemoScreen';
+import SmartHomeDemoScreen from './pages/SmartHomeDemoScreen';
 import SpotifyDemoScreen from './pages/SpotifyDemoScreen';
 import SpotifyCallbackPage from './pages/SpotifyCallbackPage';
 
@@ -15,7 +18,10 @@ const App: React.FC = () => {
       <Route path="/features" element={<FeaturesScreen />} />
       <Route path="/demo" element={<DemoScreen />} />
       <Route path="/rag-demo" element={<RagDemoScreen />} />
+      <Route path="/rag-failure-demo" element={<RagFailureDemoScreen />} />
       <Route path="/tool-demo" element={<ToolDemoScreen />} />
+      <Route path="/sales-proposal-demo" element={<SalesProposalDemoScreen />} />
+      <Route path="/smart-home-demo" element={<SmartHomeDemoScreen />} />
       <Route path="/spotify-demo" element={<SpotifyDemoScreen />} />
       <Route path="/spotify-callback" element={<SpotifyCallbackPage />} />
     </Routes>
