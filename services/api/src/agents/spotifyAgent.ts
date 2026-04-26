@@ -161,8 +161,24 @@ const WEB_SEARCH_TOOL: ChatCompletionTool = {
   },
 };
 
+const GET_PAGE_CONTENT_TOOL: ChatCompletionTool = {
+  type: 'function',
+  function: {
+    name: 'get_page_content',
+    description: 'Fetch the text content of a web page. Use this to read articles, blog posts, curated lists, or any web page discovered via web_search so you can extract detailed knowledge (e.g. specific track names, artist recommendations, playlist ideas).',
+    parameters: {
+      type: 'object',
+      properties: {
+        url: { type: 'string', description: 'The full URL of the web page to fetch (must be http or https)' },
+      },
+      required: ['url'],
+      additionalProperties: false,
+    },
+  },
+};
+
 const TOOLS: ChatCompletionTool[] = WEB_SEARCH_AVAILABLE
-  ? [...BASE_TOOLS, WEB_SEARCH_TOOL]
+  ? [...BASE_TOOLS, WEB_SEARCH_TOOL, GET_PAGE_CONTENT_TOOL]
   : BASE_TOOLS;
 
 /** Tool definitions for the UI (without the JSON Schema details) */
@@ -183,12 +199,14 @@ const RESPONSE_TOOLS: FunctionTool[] = TOOLS.map((t) => ({
 }));
 
 const WEB_SEARCH_RULES = `- When the user asks about a genre, mood, artist, activity, or any music topic, start by calling web_search to gather context (e.g. well-known tracks, key artists, characteristics of the genre). Use this research to craft better Spotify search queries.
+- When web_search returns URLs that look promising (e.g. articles, blog posts, curated lists), use get_page_content to read the full page and extract detailed knowledge such as specific track names, artist recommendations, or playlist ideas.
 - When the user asks you to create a playlist with tracks, follow this workflow:
   1. web_search (research the genre/mood/theme — do multiple searches to find key artists, iconic tracks, and hidden gems)
-  2. web_search again if needed to dig deeper (e.g. search for "best [sub-genre] tracks", "underrated [mood] songs", "[decade] [genre] classics")
-  3. search_tracks (run multiple targeted queries based on your research — aim for at least 3–5 different queries to gather a diverse, high-quality pool of tracks)
-  4. create_playlist → get playlist_id
-  5. add_tracks_to_playlist → add the best tracks from your pool`;
+  2. get_page_content on the most relevant URLs from your search results to gather detailed track and artist information
+  3. web_search again if needed to dig deeper (e.g. search for "best [sub-genre] tracks", "underrated [mood] songs", "[decade] [genre] classics")
+  4. search_tracks (run multiple targeted queries based on your research — aim for at least 3–5 different queries to gather a diverse, high-quality pool of tracks)
+  5. create_playlist → get playlist_id
+  6. add_tracks_to_playlist → add the best tracks from your pool`;
 
 const NO_WEB_SEARCH_RULES = `- When the user asks you to create a playlist with tracks, follow this workflow:
   1. search_tracks (run at least 3–5 varied targeted queries to gather a diverse, high-quality pool of tracks)

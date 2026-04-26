@@ -287,6 +287,101 @@ export async function webSearch(args: { query: string; count?: number }): Promis
   };
 }
 
+// ─── Tool: get_page_content ──────────────────────────────────────────────
+// Fetches a web page and returns its text content so the agent can use the
+// information as knowledge (e.g. reading an article about an artist or a
+// curated track list linked from a web search result).
+
+const MAX_PAGE_CONTENT_LENGTH = 20_000;
+
+export async function getPageContent(args: { url: string }): Promise<unknown> {
+  const { url } = args;
+
+  // Basic URL validation
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return { error: 'Invalid URL provided.' };
+  }
+
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    return { error: 'Only http and https URLs are supported.' };
+  }
+
+  let res: globalThis.Response;
+  try {
+    res = await fetch(url, {
+      headers: {
+        'User-Agent': 'SpotifyPlaylistAgent/1.0',
+        Accept: 'text/html, application/xhtml+xml, text/plain',
+      },
+      redirect: 'follow',
+      signal: AbortSignal.timeout(8_000),
+    });
+  } catch (err) {
+    return { error: `Failed to fetch page: ${err instanceof Error ? err.message : String(err)}` };
+  }
+
+  if (!res.ok) {
+    return { error: `Page returned HTTP ${res.status}` };
+  }
+
+  let body: string;
+  try {
+    body = await res.text();
+  } catch (err) {
+    return { error: `Failed to read page body: ${err instanceof Error ? err.message : String(err)}` };
+  }
+
+  // Strip HTML to extract readable text content.
+  // Use loops to handle nested/malformed script and style blocks that a single
+  // pass may miss (addresses CodeQL incomplete-multi-character-sanitization).
+  let stripped = body;
+
+  // Remove script blocks (allow optional whitespace in closing tag)
+  let prev = '';
+  while (prev !== stripped) {
+    prev = stripped;
+    stripped = stripped.replace(/<script\b[^>]*>[\s\S]*?<\/\s*script[^>]*>/gi, '');
+  }
+
+  // Remove style blocks
+  prev = '';
+  while (prev !== stripped) {
+    prev = stripped;
+    stripped = stripped.replace(/<style\b[^>]*>[\s\S]*?<\/\s*style[^>]*>/gi, '');
+  }
+
+  // Remove remaining HTML tags and decode common entities.
+  // Decode &amp; last to avoid double-unescaping (e.g. &amp;lt; → &lt; → <).
+  const text = stripped
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, '&')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (!text) {
+    return { error: 'Page contained no readable text content.' };
+  }
+
+  // Truncate to keep token usage reasonable
+  const truncated = text.length > MAX_PAGE_CONTENT_LENGTH;
+  const content = truncated ? text.slice(0, MAX_PAGE_CONTENT_LENGTH) : text;
+
+  return {
+    url,
+    content,
+    truncated,
+    originalLength: text.length,
+  };
+}
+
 // ─── Tool dispatcher ─────────────────────────────────────────────────────────
 
 export async function executeSpotifyTool(
@@ -312,6 +407,8 @@ export async function executeSpotifyTool(
         return await removeTracksFromPlaylist(token, args as Parameters<typeof removeTracksFromPlaylist>[1]);
       case 'web_search':
         return await webSearch(args as Parameters<typeof webSearch>[0]);
+      case 'get_page_content':
+        return await getPageContent(args as Parameters<typeof getPageContent>[0]);
       default:
         return { error: `Unknown Spotify tool: ${name}` };
     }
