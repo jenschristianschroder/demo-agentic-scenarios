@@ -35,6 +35,9 @@ param acrLoginServer string
 @secure()
 param tavilyApiKey string = ''
 
+@description('Azure OpenAI reasoning model deployment name (optional)')
+param openAIReasoningDeployment string = ''
+
 resource apiApp 'Microsoft.App/containerApps@2023-05-01' = {
   name: name
   location: location
@@ -79,6 +82,7 @@ resource apiApp 'Microsoft.App/containerApps@2023-05-01' = {
             { name: 'AZURE_SEARCH_ENDPOINT', value: searchEndpoint }
             { name: 'AZURE_SEARCH_INDEX', value: searchIndex }
             { name: 'CORS_ORIGIN', value: '*' }
+            ...(empty(openAIReasoningDeployment) ? [] : [{ name: 'AZURE_OPENAI_REASONING_DEPLOYMENT', value: openAIReasoningDeployment }])
             ...(empty(tavilyApiKey) ? [] : [{ name: 'TAVILY_API_KEY', secretRef: 'tavily-api-key' }])
           ]
         }
