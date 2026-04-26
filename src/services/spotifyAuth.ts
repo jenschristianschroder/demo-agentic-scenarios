@@ -214,8 +214,8 @@ export function isSpotifyAuthenticated(): boolean {
   if (!token) return false;
 
   const expiresAt = Number(localStorage.getItem('spotify_token_expires_at') || '0');
-  // If the stored expiry is in the past, the token is stale
-  if (expiresAt > 0 && Date.now() >= expiresAt) return false;
+  // If no expiry is stored or the stored expiry is in the past, treat as unauthenticated
+  if (expiresAt <= 0 || Date.now() >= expiresAt) return false;
 
   return true;
 }

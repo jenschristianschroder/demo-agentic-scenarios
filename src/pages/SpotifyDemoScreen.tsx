@@ -23,8 +23,9 @@ const SpotifyDemoScreen: React.FC = () => {
           // Validate token and fetch user profile
           fetchSpotifyProfile(token)
             .then((profile) => setUserProfile(profile))
-            .catch(() => {
+            .catch((err) => {
               // Token is invalid — clear and reset
+              console.warn('Spotify token validation failed, disconnecting:', err);
               clearTokens();
               setAuthenticated(false);
               setAccessToken(null);
