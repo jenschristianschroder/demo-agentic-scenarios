@@ -258,7 +258,7 @@ async function runSpotifyAgentReasoning(
   emit(res, { type: 'step-complete', step: 'user-request', timestamp: ts(), data: { prompt } });
 
   // ── Step 2: Show available tools ─────────────────────────────────────────
-  emit(res, { type: 'step-start', step: 'reasoning', timestamp: ts(), data: { tools: SPOTIFY_TOOL_DEFINITIONS } });
+  emit(res, { type: 'step-start', step: 'reasoning', timestamp: ts(), data: { tools: SPOTIFY_TOOL_DEFINITIONS, model: deployment } });
 
   // ── Step 3: Tool-calling loop ─────────────────────────────────────────────
   // The Responses API maintains conversation state via previous_response_id.
@@ -430,7 +430,7 @@ async function runSpotifyAgentChat(
   emit(res, { type: 'step-complete', step: 'user-request', timestamp: ts(), data: { prompt } });
 
   // ── Step 2: Show available tools ───────────────────────────────────────
-  emit(res, { type: 'step-start', step: 'reasoning', timestamp: ts(), data: { tools: SPOTIFY_TOOL_DEFINITIONS } });
+  emit(res, { type: 'step-start', step: 'reasoning', timestamp: ts(), data: { tools: SPOTIFY_TOOL_DEFINITIONS, model: deployment } });
 
   // ── Step 3: Tool-calling loop ──────────────────────────────────────────
   const messages: ChatCompletionMessageParam[] = [

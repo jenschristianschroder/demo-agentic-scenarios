@@ -95,6 +95,7 @@ const SpotifyDemoScreen: React.FC = () => {
   const [finalResponse, setFinalResponse] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [events, setEvents] = useState<ToolEvent[]>([]);
+  const [modelName, setModelName] = useState<string | null>(null);
 
   const handleRun = useCallback(async () => {
     if (!prompt.trim() || isRunning || !accessToken) return;
@@ -125,6 +126,7 @@ const SpotifyDemoScreen: React.FC = () => {
     setFinalResponse(null);
     setError(null);
     setEvents([]);
+    setModelName(null);
 
     const request: SpotifyRequest = {
       prompt: prompt.trim(),
@@ -141,6 +143,9 @@ const SpotifyDemoScreen: React.FC = () => {
           setActiveStep(event.step);
           if (event.step === 'reasoning' && event.data && 'tools' in event.data) {
             setTools(event.data.tools);
+            if ('model' in event.data && event.data.model) {
+              setModelName(event.data.model);
+            }
           }
         }
 
@@ -195,7 +200,18 @@ const SpotifyDemoScreen: React.FC = () => {
   return (
     <div className="spotify-screen">
       <div className="spotify-header">
-        <span className="spotify-header-title">Spotify Playlist Agent</span>
+        <div className="spotify-header-left">
+          <span className="spotify-header-title">Spotify Playlist Agent</span>
+          {modelName && (
+            <span className="spotify-model-badge">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2a4 4 0 0 1 4 4v2a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4z" />
+                <path d="M16 14H8a4 4 0 0 0-4 4v2h16v-2a4 4 0 0 0-4-4z" />
+              </svg>
+              {modelName}
+            </span>
+          )}
+        </div>
         <div className="spotify-auth-section">
           {authenticated ? (
             <>
