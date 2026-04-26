@@ -171,10 +171,17 @@ async function runImageGenPipeline(
 
       const generationDurationMs = Date.now() - genStart;
       const imageData = imgResponse.data?.[0];
-      if (!imageData?.url) throw new Error('gpt-image-2 returned no image URL');
+      let imageUrl: string;
+      if (imageData?.url) {
+        imageUrl = imageData.url;
+      } else if (imageData?.b64_json) {
+        imageUrl = `data:image/png;base64,${imageData.b64_json}`;
+      } else {
+        throw new Error('gpt-image-2 returned no image data');
+      }
 
       imageOutput = {
-        imageUrl: imageData.url,
+        imageUrl,
         revisedPrompt: imageData.revised_prompt ?? promptOutput.refinedPrompt,
         generationDurationMs,
         iteration,
