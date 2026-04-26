@@ -8,8 +8,10 @@ const SPOTIFY_TOKEN_URL = 'https://accounts.spotify.com/api/token';
 // Buffer in seconds before token expiry to trigger a refresh
 const TOKEN_REFRESH_BUFFER_SECONDS = 60;
 
-// Minimum scopes for playlist management
+// Scopes for playlist management and user profile access
 const SCOPES = [
+  'user-read-private',
+  'user-read-email',
   'playlist-read-private',
   'playlist-modify-public',
   'playlist-modify-private',
