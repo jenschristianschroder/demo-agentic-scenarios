@@ -216,7 +216,7 @@ const ImageGenDemoScreen: React.FC = () => {
   const [concept, setConcept] = useState(PRESET_CONCEPTS[0].prompt);
   const [style, setStyle] = useState(STYLES[0]);
   const [size, setSize] = useState<ImageSize>('1024x1024');
-  const [quality, setQuality] = useState<ImageQuality>('standard');
+  const [quality, setQuality] = useState<ImageQuality>('auto');
   const [artDirectorEnabled, setArtDirectorEnabled] = useState(true);
   const [maxRevisions, setMaxRevisions] = useState(2);
   const [creativityLevel, setCreativityLevel] = useState(0.7);
@@ -387,7 +387,7 @@ const ImageGenDemoScreen: React.FC = () => {
             <div className="control-group control-group-flex">
               <label className="control-label">Quality</label>
               <div className="ig-quality-buttons">
-                {(['standard', 'hd'] as ImageQuality[]).map((q) => (
+                {(['low', 'medium', 'high', 'auto'] as ImageQuality[]).map((q) => (
                   <button
                     key={q}
                     type="button"
@@ -395,7 +395,7 @@ const ImageGenDemoScreen: React.FC = () => {
                     onClick={() => setQuality(q)}
                     disabled={isRunning}
                   >
-                    {q === 'hd' ? 'HD' : 'Standard'}
+                    {q.charAt(0).toUpperCase() + q.slice(1)}
                   </button>
                 ))}
               </div>

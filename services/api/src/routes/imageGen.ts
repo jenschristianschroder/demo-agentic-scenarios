@@ -22,7 +22,7 @@ import { reviewImage, mockReviewImage } from '../agents/artDirectorAgent.js';
 export const imageGenRouter = Router();
 
 const VALID_SIZES: ImageSize[] = ['1024x1024', '1792x1024', '1024x1792'];
-const VALID_QUALITIES: ImageQuality[] = ['standard', 'hd'];
+const VALID_QUALITIES: ImageQuality[] = ['low', 'medium', 'high', 'auto'];
 const MAX_REVISIONS = 3;
 
 // Placeholder image used in mock mode (simple SVG data URL)
@@ -70,7 +70,7 @@ imageGenRouter.post('/run', (req: Request, res: Response) => {
   }
 
   const size: ImageSize = VALID_SIZES.includes(body.size) ? body.size : '1024x1024';
-  const quality: ImageQuality = VALID_QUALITIES.includes(body.quality) ? body.quality : 'standard';
+  const quality: ImageQuality = VALID_QUALITIES.includes(body.quality) ? body.quality : 'auto';
   const maxRevisions = Math.min(MAX_REVISIONS, Math.max(1, Math.round(body.maxRevisions ?? 1)));
   const artDirectorEnabled = body.artDirectorEnabled === true;
   const creativityLevel = Math.min(1, Math.max(0, body.creativityLevel ?? 0.7));
