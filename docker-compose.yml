@@ -1,6 +1,9 @@
 services:
   multi-agent-spa:
-    build: .
+    build:
+      context: .
+      args:
+        - VITE_SPOTIFY_CLIENT_ID=${VITE_SPOTIFY_CLIENT_ID}
     ports:
       - "3000:80"
     environment:
