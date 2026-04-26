@@ -1,7 +1,8 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import type { ToolStep, ToolEvent, ToolCallRecord, ToolDefinition, SpotifyRequest } from '../types';
 import { runSpotifyAgent } from '../services/spotifyApi';
-import { startSpotifyLogin, getAccessToken, isSpotifyAuthenticated, clearTokens } from '../services/spotifyAuth';
+import { startSpotifyLogin, getAccessToken, isSpotifyAuthenticated, clearTokens, fetchSpotifyProfile } from '../services/spotifyAuth';
+import type { SpotifyUserProfile } from '../services/spotifyAuth';
 import ToolPipelineView from './components/ToolPipelineView';
 import ToolInventory from './components/ToolInventory';
 import ToolTimeline from './components/ToolTimeline';
@@ -12,27 +13,44 @@ const SpotifyDemoScreen: React.FC = () => {
   // ─── Auth state ─────────────────────────────────────────────────────────
   const [authenticated, setAuthenticated] = useState(isSpotifyAuthenticated());
   const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [userProfile, setUserProfile] = useState<SpotifyUserProfile | null>(null);
 
   useEffect(() => {
     if (authenticated) {
       getAccessToken().then((token) => {
         if (token) {
           setAccessToken(token);
+          // Validate token and fetch user profile
+          fetchSpotifyProfile(token)
+            .then((profile) => setUserProfile(profile))
+            .catch(() => {
+              // Token is invalid — clear and reset
+              clearTokens();
+              setAuthenticated(false);
+              setAccessToken(null);
+              setUserProfile(null);
+            });
         } else {
           setAuthenticated(false);
+          setUserProfile(null);
         }
       });
     }
   }, [authenticated]);
 
-  const handleConnect = useCallback(() => {
-    startSpotifyLogin();
+  const handleConnect = useCallback(async () => {
+    try {
+      await startSpotifyLogin();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to start Spotify login');
+    }
   }, []);
 
   const handleDisconnect = useCallback(() => {
     clearTokens();
     setAuthenticated(false);
     setAccessToken(null);
+    setUserProfile(null);
   }, []);
 
   // ─── Controls state ───────────────────────────────────────────────────────
@@ -135,9 +153,23 @@ const SpotifyDemoScreen: React.FC = () => {
         <span className="spotify-header-title">Spotify Playlist Agent</span>
         <div className="spotify-auth-section">
           {authenticated ? (
-            <button className="spotify-disconnect-btn" onClick={handleDisconnect} type="button">
-              Disconnect
-            </button>
+            <>
+              {userProfile && (
+                <div className="spotify-user-info">
+                  {userProfile.imageUrl && (
+                    <img
+                      className="spotify-user-avatar"
+                      src={userProfile.imageUrl}
+                      alt={userProfile.displayName}
+                    />
+                  )}
+                  <span className="spotify-user-name">{userProfile.displayName}</span>
+                </div>
+              )}
+              <button className="spotify-disconnect-btn" onClick={handleDisconnect} type="button">
+                Disconnect
+              </button>
+            </>
           ) : (
             <button className="spotify-connect-btn" onClick={handleConnect} type="button">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">

@@ -207,9 +207,50 @@ export async function getAccessToken(): Promise<string | null> {
 
 /**
  * Check if the user is currently authenticated with Spotify.
+ * Only returns true if a token exists AND has not expired.
  */
 export function isSpotifyAuthenticated(): boolean {
-  return !!localStorage.getItem('spotify_access_token');
+  const token = localStorage.getItem('spotify_access_token');
+  if (!token) return false;
+
+  const expiresAt = Number(localStorage.getItem('spotify_token_expires_at') || '0');
+  // If the stored expiry is in the past, the token is stale
+  if (expiresAt > 0 && Date.now() >= expiresAt) return false;
+
+  return true;
+}
+
+// ─── Spotify user profile ────────────────────────────────────────────────────
+
+export interface SpotifyUserProfile {
+  displayName: string;
+  email?: string;
+  imageUrl?: string;
+  id: string;
+}
+
+/**
+ * Fetch the current user's Spotify profile using the provided access token.
+ * This also serves as a token validation check — if the token is invalid the
+ * call will fail.
+ */
+export async function fetchSpotifyProfile(accessToken: string): Promise<SpotifyUserProfile> {
+  const res = await fetch('https://api.spotify.com/v1/me', {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Failed to fetch Spotify profile (${res.status}): ${text}`);
+  }
+
+  const data = await res.json();
+  return {
+    id: data.id,
+    displayName: data.display_name ?? data.id,
+    email: data.email,
+    imageUrl: data.images?.[0]?.url,
+  };
 }
 
 /**
