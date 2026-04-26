@@ -106,7 +106,9 @@ jobs:
 
       - name: Build & push SPA image
         run: |
-          docker build -t ${{ steps.acr.outputs.acrLoginServer }}/${{ env.APP_NAME }}-spa:${{ github.sha }} .
+          docker build \
+            --build-arg VITE_SPOTIFY_CLIENT_ID=${{ secrets.VITE_SPOTIFY_CLIENT_ID }} \
+            -t ${{ steps.acr.outputs.acrLoginServer }}/${{ env.APP_NAME }}-spa:${{ github.sha }} .
           docker push ${{ steps.acr.outputs.acrLoginServer }}/${{ env.APP_NAME }}-spa:${{ github.sha }}
 
       # ─── Update container apps with new images ──────────────────────

@@ -121,7 +121,7 @@ export const STEP_LABELS: Record<AgentStep, string> = {
 
 // ─── Scenario / Features definitions ─────────────────────────────────────────
 
-export type ScenarioId = 'multi-agent-orchestration' | 'rag-pipeline' | 'tool-use' | 'rag-failure-recovery' | 'sales-proposal' | 'smart-home-bundle';
+export type ScenarioId = 'multi-agent-orchestration' | 'rag-pipeline' | 'tool-use' | 'rag-failure-recovery' | 'sales-proposal' | 'smart-home-bundle' | 'spotify-playlists';
 
 export interface ScenarioInfo {
   id: ScenarioId;
@@ -179,6 +179,14 @@ export const SCENARIOS: ScenarioInfo[] = [
       'Agents recommend, review privacy, check compatibility, and assemble a smart home bundle — with approvals, objections, and conditions',
     icon: '🏠',
     route: '/smart-home-demo',
+  },
+  {
+    id: 'spotify-playlists',
+    label: 'Spotify Playlist Agent',
+    description:
+      'An AI agent that connects to your Spotify account to search tracks, create playlists, and manage your music library',
+    icon: '🎵',
+    route: '/spotify-demo',
   },
 ];
 
@@ -510,4 +518,12 @@ export interface SmartHomeEvent {
 export interface SmartHomeRequest {
   prompt: string;
   creativityLevel: number;
+}
+
+// ─── Spotify Playlist Agent Contracts ────────────────────────────────────────
+
+export interface SpotifyRequest {
+  prompt: string;
+  creativityLevel: number;
+  accessToken: string;
 }

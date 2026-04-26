@@ -134,6 +134,14 @@ export interface ToolRequest {
   creativityLevel: number;
 }
 
+// ─── Spotify Playlist Agent Contracts ────────────────────────────────────────
+
+export interface SpotifyRequest {
+  prompt: string;
+  creativityLevel: number;
+  accessToken: string;
+}
+
 // ─── RAG Pipeline Contracts ─────────────────────────────────────────────────
 
 export type RagStep = 'user-request' | 'retrieval' | 'generation' | 'final-answer';

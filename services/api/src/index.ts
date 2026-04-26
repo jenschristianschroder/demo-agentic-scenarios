@@ -3,6 +3,7 @@ import cors from 'cors';
 import { orchestrationRouter } from './routes/orchestration.js';
 import { ragRouter } from './routes/rag.js';
 import { toolsRouter } from './routes/tools.js';
+import { spotifyRouter } from './routes/spotify.js';
 import { healthRouter } from './routes/health.js';
 import { salesProposalRouter } from './routes/salesProposal.js';
 import { smartHomeRouter } from './routes/smartHome.js';
@@ -19,6 +20,7 @@ app.use('/api/rag', ragRouter);
 app.use('/api/tools', toolsRouter);
 app.use('/api/sales-proposal', salesProposalRouter);
 app.use('/api/smart-home', smartHomeRouter);
+app.use('/api/spotify', spotifyRouter);
 app.use('/health', healthRouter);
 
 app.listen(PORT, () => {
