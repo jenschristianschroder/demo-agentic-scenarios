@@ -31,6 +31,10 @@ param searchIndex string
 @description('ACR login server')
 param acrLoginServer string
 
+@description('Tavily Search API key for the web_search tool (optional)')
+@secure()
+param tavilyApiKey string = ''
+
 resource apiApp 'Microsoft.App/containerApps@2023-05-01' = {
   name: name
   location: location
@@ -54,6 +58,9 @@ resource apiApp 'Microsoft.App/containerApps@2023-05-01' = {
           identity: identityId
         }
       ]
+      secrets: empty(tavilyApiKey) ? [] : [
+        { name: 'tavily-api-key', value: tavilyApiKey }
+      ]
     }
     template: {
       containers: [
@@ -72,6 +79,7 @@ resource apiApp 'Microsoft.App/containerApps@2023-05-01' = {
             { name: 'AZURE_SEARCH_ENDPOINT', value: searchEndpoint }
             { name: 'AZURE_SEARCH_INDEX', value: searchIndex }
             { name: 'CORS_ORIGIN', value: '*' }
+            ...(empty(tavilyApiKey) ? [] : [{ name: 'TAVILY_API_KEY', secretRef: 'tavily-api-key' }])
           ]
         }
       ]

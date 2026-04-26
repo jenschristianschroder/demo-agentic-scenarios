@@ -20,6 +20,10 @@ param searchIndex string = 'knowledge-base'
 @description('Container image tag (typically the git SHA)')
 param imageTag string
 
+@description('Tavily Search API key for the web_search tool (optional)')
+@secure()
+param tavilyApiKey string = ''
+
 // ─── Derived names ───────────────────────────────────────────────────────────
 
 var acrName = '${replace('${appName}acr', '-', '')}${uniqueString(resourceGroup().id)}'
@@ -91,6 +95,7 @@ module apiApp 'modules/aca-api.bicep' = {
     searchEndpoint: search.outputs.endpoint
     searchIndex: searchIndex
     acrLoginServer: acr.outputs.loginServer
+    tavilyApiKey: tavilyApiKey
   }
 }
 

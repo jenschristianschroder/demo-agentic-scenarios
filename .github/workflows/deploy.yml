@@ -54,6 +54,7 @@ jobs:
           template: infra/main.bicep
           parameters: >-
             imageTag=${{ github.sha }}
+            tavilyApiKey=${{ secrets.TAVILY_API_KEY }}
           failOnStdErr: false
 
       - name: Validate infra deployment failure reason
