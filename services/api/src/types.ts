@@ -417,3 +417,69 @@ export interface ModelRouterEvent {
     | { message: string }
     | null;
 }
+
+// ─── AI Creative Studio (Image Generation) Contracts ────────────────────────
+
+export type ImageGenStep =
+  | 'user-request'
+  | 'prompt-engineer'
+  | 'image-generation'
+  | 'art-director'
+  | 'final-image';
+
+export type ImageSize = '1024x1024' | '1792x1024' | '1024x1792';
+export type ImageQuality = 'standard' | 'hd';
+
+export interface PromptEngineerOutput {
+  refinedPrompt: string;
+  styleNotes: string;
+  compositionNotes: string;
+  iteration: number;
+}
+
+export interface ImageGenerationOutput {
+  imageUrl: string;
+  revisedPrompt: string;
+  generationDurationMs: number;
+  iteration: number;
+}
+
+export interface ArtDirectorOutput {
+  verdict: 'approved' | 'needs-revision';
+  score: number;
+  feedback: string;
+  revisionInstructions?: string;
+  iteration: number;
+}
+
+export interface ImageGenSummary {
+  finalImageUrl: string;
+  finalPrompt: string;
+  totalIterations: number;
+  artDirectorScore?: number;
+  artDirectorFeedback?: string;
+}
+
+export interface ImageGenEvent {
+  type: 'step-start' | 'step-complete' | 'run-complete' | 'error';
+  step: ImageGenStep;
+  timestamp: string;
+  data:
+    | PromptEngineerOutput
+    | ImageGenerationOutput
+    | ArtDirectorOutput
+    | ImageGenSummary
+    | { concept: string }
+    | { message: string }
+    | null;
+}
+
+export interface ImageGenRequest {
+  concept: string;
+  style: string;
+  size: ImageSize;
+  quality: ImageQuality;
+  artDirectorEnabled: boolean;
+  maxRevisions: number;
+  creativityLevel: number;
+}

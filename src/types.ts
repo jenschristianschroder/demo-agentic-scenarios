@@ -121,7 +121,7 @@ export const STEP_LABELS: Record<AgentStep, string> = {
 
 // ─── Scenario / Features definitions ─────────────────────────────────────────
 
-export type ScenarioId = 'multi-agent-orchestration' | 'rag-pipeline' | 'tool-use' | 'rag-failure-recovery' | 'sales-proposal' | 'smart-home-bundle' | 'spotify-playlists' | 'model-router';
+export type ScenarioId = 'multi-agent-orchestration' | 'rag-pipeline' | 'tool-use' | 'rag-failure-recovery' | 'sales-proposal' | 'smart-home-bundle' | 'spotify-playlists' | 'model-router' | 'image-generation';
 
 export interface ScenarioInfo {
   id: ScenarioId;
@@ -195,6 +195,14 @@ export const SCENARIOS: ScenarioInfo[] = [
       'Send the same prompt through three routing modes — balanced, quality, and cost — and compare which model is selected, response quality, latency, and token usage side by side',
     icon: '🔀',
     route: '/model-router-demo',
+  },
+  {
+    id: 'image-generation',
+    label: 'AI Creative Studio',
+    description:
+      'A prompt engineer refines your concept, DALL-E 3 generates the image, and an optional art director reviews and requests revisions — watch the agentic loop in real time',
+    icon: '🎨',
+    route: '/image-gen-demo',
   },
 ];
 
@@ -578,4 +586,78 @@ export interface ModelRouterEvent {
     | { prompt: string }
     | { message: string }
     | null;
+}
+
+// ─── AI Creative Studio (Image Generation) Contracts ────────────────────────
+
+export type ImageGenStep =
+  | 'user-request'
+  | 'prompt-engineer'
+  | 'image-generation'
+  | 'art-director'
+  | 'final-image';
+
+export const IMAGE_GEN_STEP_LABELS: Record<ImageGenStep, string> = {
+  'user-request': 'Concept',
+  'prompt-engineer': 'Prompt Engineer',
+  'image-generation': 'DALL-E 3',
+  'art-director': 'Art Director',
+  'final-image': 'Final Image',
+};
+
+export type ImageSize = '1024x1024' | '1792x1024' | '1024x1792';
+export type ImageQuality = 'standard' | 'hd';
+
+export interface PromptEngineerOutput {
+  refinedPrompt: string;
+  styleNotes: string;
+  compositionNotes: string;
+  iteration: number;
+}
+
+export interface ImageGenerationOutput {
+  imageUrl: string;
+  revisedPrompt: string;
+  generationDurationMs: number;
+  iteration: number;
+}
+
+export interface ArtDirectorOutput {
+  verdict: 'approved' | 'needs-revision';
+  score: number;
+  feedback: string;
+  revisionInstructions?: string;
+  iteration: number;
+}
+
+export interface ImageGenSummary {
+  finalImageUrl: string;
+  finalPrompt: string;
+  totalIterations: number;
+  artDirectorScore?: number;
+  artDirectorFeedback?: string;
+}
+
+export interface ImageGenEvent {
+  type: 'step-start' | 'step-complete' | 'run-complete' | 'error';
+  step: ImageGenStep;
+  timestamp: string;
+  data:
+    | PromptEngineerOutput
+    | ImageGenerationOutput
+    | ArtDirectorOutput
+    | ImageGenSummary
+    | { concept: string }
+    | { message: string }
+    | null;
+}
+
+export interface ImageGenRequest {
+  concept: string;
+  style: string;
+  size: ImageSize;
+  quality: ImageQuality;
+  artDirectorEnabled: boolean;
+  maxRevisions: number;
+  creativityLevel: number;
 }
