@@ -8,8 +8,10 @@ const SPOTIFY_TOKEN_URL = 'https://accounts.spotify.com/api/token';
 // Buffer in seconds before token expiry to trigger a refresh
 const TOKEN_REFRESH_BUFFER_SECONDS = 60;
 
-// Minimum scopes for playlist management
+// Scopes for playlist management and user profile access
 const SCOPES = [
+  'user-read-private',
+  'user-read-email',
   'playlist-read-private',
   'playlist-modify-public',
   'playlist-modify-private',
@@ -205,9 +207,50 @@ export async function getAccessToken(): Promise<string | null> {
 
 /**
  * Check if the user is currently authenticated with Spotify.
+ * Only returns true if a token exists AND has not expired.
  */
 export function isSpotifyAuthenticated(): boolean {
-  return !!localStorage.getItem('spotify_access_token');
+  const token = localStorage.getItem('spotify_access_token');
+  if (!token) return false;
+
+  const expiresAt = Number(localStorage.getItem('spotify_token_expires_at') || '0');
+  // If no expiry is stored or the stored expiry is in the past, treat as unauthenticated
+  if (expiresAt <= 0 || Date.now() >= expiresAt) return false;
+
+  return true;
+}
+
+// ─── Spotify user profile ────────────────────────────────────────────────────
+
+export interface SpotifyUserProfile {
+  displayName: string;
+  email?: string;
+  imageUrl?: string;
+  id: string;
+}
+
+/**
+ * Fetch the current user's Spotify profile using the provided access token.
+ * This also serves as a token validation check — if the token is invalid the
+ * call will fail.
+ */
+export async function fetchSpotifyProfile(accessToken: string): Promise<SpotifyUserProfile> {
+  const res = await fetch('https://api.spotify.com/v1/me', {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Failed to fetch Spotify profile (${res.status}): ${text}`);
+  }
+
+  const data = await res.json();
+  return {
+    id: data.id,
+    displayName: data.display_name ?? data.id,
+    email: data.email,
+    imageUrl: data.images?.[0]?.url,
+  };
 }
 
 /**

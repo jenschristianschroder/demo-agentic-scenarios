@@ -77,6 +77,28 @@
   color: #c62828;
 }
 
+/* ─── Connected user info ──────────────────────────────────── */
+
+.spotify-user-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.spotify-user-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1.5px solid #e0e0e0;
+}
+
+.spotify-user-name {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #333;
+}
+
 /* ─── Auth gate (not connected) ────────────────────────────── */
 
 .spotify-auth-gate {

@@ -53,7 +53,17 @@ async function spotifyFetch(
       errorMessage = errorBody;
     }
 
-    lastError = new Error(`Spotify API ${res.status}: ${errorMessage}`);
+    // Provide actionable guidance for 403 errors
+    if (res.status === 403) {
+      const hint =
+        'This usually means the Spotify app is in Development Mode and the user has not been added ' +
+        'in the Spotify Developer Dashboard (Settings → User Management). ' +
+        'Ask the app owner to add your Spotify account, or submit the app for a quota extension. ' +
+        'If scopes were recently changed, disconnect and reconnect to Spotify to re-authorize.';
+      lastError = new Error(`Spotify API 403 Forbidden: ${errorMessage}. ${hint}`);
+    } else {
+      lastError = new Error(`Spotify API ${res.status}: ${errorMessage}`);
+    }
 
     // Only retry on server errors
     if (res.status >= 500 && attempt < MAX_RETRIES) {
