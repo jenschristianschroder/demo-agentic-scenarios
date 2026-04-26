@@ -200,7 +200,7 @@ export const SCENARIOS: ScenarioInfo[] = [
     id: 'image-generation',
     label: 'AI Creative Studio',
     description:
-      'A prompt engineer refines your concept, DALL-E 3 generates the image, and an optional art director reviews and requests revisions — watch the agentic loop in real time',
+      'A prompt engineer refines your concept, gpt-image-2 generates the image, and an optional art director reviews and requests revisions — watch the agentic loop in real time',
     icon: '🎨',
     route: '/image-gen-demo',
   },
@@ -600,7 +600,7 @@ export type ImageGenStep =
 export const IMAGE_GEN_STEP_LABELS: Record<ImageGenStep, string> = {
   'user-request': 'Concept',
   'prompt-engineer': 'Prompt Engineer',
-  'image-generation': 'DALL-E 3',
+  'image-generation': 'gpt-image-2',
   'art-director': 'Art Director',
   'final-image': 'Final Image',
 };

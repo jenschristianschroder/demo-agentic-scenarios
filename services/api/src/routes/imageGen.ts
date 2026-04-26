@@ -1,6 +1,6 @@
 // ─── Image Generation Route ──────────────────────────────────────────────────
 // POST /api/image-gen/run
-// Orchestrates: Prompt Engineer → DALL-E 3 → Art Director (optional revision loop)
+// Orchestrates: Prompt Engineer → gpt-image-2 → Art Director (optional revision loop)
 // Streams progress as Server-Sent Events.
 
 import { Router } from 'express';
@@ -172,7 +172,7 @@ async function runImageGenPipeline(
 
       const generationDurationMs = Date.now() - genStart;
       const imageData = imgResponse.data?.[0];
-      if (!imageData?.url) throw new Error('DALL-E 3 returned no image URL');
+      if (!imageData?.url) throw new Error('gpt-image-2 returned no image URL');
 
       imageOutput = {
         imageUrl: imageData.url,
