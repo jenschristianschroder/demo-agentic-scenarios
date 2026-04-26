@@ -129,51 +129,6 @@ export async function searchTracks(
   };
 }
 
-// ─── Tool: get_recommendations ───────────────────────────────────────────────
-// NOTE: The GET /recommendations endpoint was removed from the Spotify Web API
-// for Development Mode apps in the February 2026 migration. This implementation
-// is kept for extended-quota apps. It is not registered in executeSpotifyTool
-// or the agent's tool list for dev mode compatibility.
-
-export async function getRecommendations(
-  token: string,
-  args: {
-    seed_tracks?: string[];
-    seed_genres?: string[];
-    limit?: number;
-    target_energy?: number;
-    target_danceability?: number;
-    target_valence?: number;
-  }
-): Promise<unknown> {
-  const params = new URLSearchParams();
-  if (args.seed_tracks?.length) params.set('seed_tracks', args.seed_tracks.slice(0, 5).join(','));
-  if (args.seed_genres?.length) params.set('seed_genres', args.seed_genres.slice(0, 5).join(','));
-  params.set('limit', String(Math.min(args.limit ?? 10, 100)));
-  if (args.target_energy !== undefined) params.set('target_energy', String(args.target_energy));
-  if (args.target_danceability !== undefined) params.set('target_danceability', String(args.target_danceability));
-  if (args.target_valence !== undefined) params.set('target_valence', String(args.target_valence));
-
-  // Need at least one seed
-  if (!params.has('seed_tracks') && !params.has('seed_genres')) {
-    return { error: 'At least one of seed_tracks or seed_genres is required.' };
-  }
-
-  const data = (await spotifyFetch(token, `/recommendations?${params}`)) as {
-    tracks?: Array<Record<string, unknown>>;
-  };
-  const tracks = data?.tracks ?? [];
-  return {
-    tracks: tracks.map((t: Record<string, unknown>) => ({
-      id: t.id,
-      name: t.name,
-      uri: t.uri,
-      artists: (t.artists as Array<{ name: string }>)?.map((a) => a.name).join(', '),
-      album: (t.album as { name: string })?.name,
-    })),
-  };
-}
-
 // ─── Tool: get_user_playlists ────────────────────────────────────────────────
 
 export async function getUserPlaylists(

@@ -10,9 +10,6 @@ import { executeSpotifyTool } from '../tools/spotifyTools.js';
 import type { ChatCompletionMessageParam, ChatCompletionTool } from 'openai/resources/chat/completions';
 
 // ─── Tool schemas for OpenAI function calling ────────────────────────────────
-// NOTE: get_recommendations is intentionally excluded — the GET /recommendations
-// endpoint was removed from the Spotify Web API for Development Mode apps in
-// the February 2026 migration. search_tracks should be used for discovery.
 
 const TOOLS: ChatCompletionTool[] = [
   {
@@ -32,7 +29,7 @@ const TOOLS: ChatCompletionTool[] = [
     type: 'function',
     function: {
       name: 'search_tracks',
-      description: 'Search for tracks on Spotify by query (artist, track name, genre, mood, etc). Returns track IDs, names, artists, and URIs. Use multiple targeted queries to discover varied tracks for a playlist (replaces the removed get_recommendations endpoint).',
+      description: 'Search for tracks on Spotify by query (artist, track name, genre, mood, etc). Returns track IDs, names, artists, and URIs. Use multiple targeted queries to discover varied tracks for a playlist.',
       parameters: {
         type: 'object',
         properties: {
