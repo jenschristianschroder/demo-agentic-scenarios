@@ -182,6 +182,8 @@ IMPORTANT RULES:
 - Always provide a clear, well-formatted final answer summarizing what you did, including playlist names, track lists, and links when available.
 - If a Spotify API error occurs, explain it clearly to the user.`;
 
+// Higher than the default 10 because Spotify workflows often require several
+// sequential steps (get user → search → create playlist → add tracks).
 const MAX_TOOL_ROUNDS = 15;
 
 /**

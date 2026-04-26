@@ -5,6 +5,9 @@
 const SPOTIFY_AUTH_URL = 'https://accounts.spotify.com/authorize';
 const SPOTIFY_TOKEN_URL = 'https://accounts.spotify.com/api/token';
 
+// Buffer in seconds before token expiry to trigger a refresh
+const TOKEN_REFRESH_BUFFER_SECONDS = 60;
+
 // Minimum scopes for playlist management
 const SCOPES = [
   'playlist-read-private',
@@ -149,8 +152,8 @@ function saveTokens(data: TokenResponse): void {
   if (data.refresh_token) {
     sessionStorage.setItem('spotify_refresh_token', data.refresh_token);
   }
-  // Store expiry time (current time + expires_in seconds, minus 60s buffer)
-  const expiresAt = Date.now() + (data.expires_in - 60) * 1000;
+  // Store expiry time (current time + expires_in seconds, minus buffer)
+  const expiresAt = Date.now() + (data.expires_in - TOKEN_REFRESH_BUFFER_SECONDS) * 1000;
   sessionStorage.setItem('spotify_token_expires_at', String(expiresAt));
 }
 
