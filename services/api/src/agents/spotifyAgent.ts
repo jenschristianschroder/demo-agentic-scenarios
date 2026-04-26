@@ -241,6 +241,11 @@ export async function runSpotifyAgent(
     const assistantMessage = choice.message;
     messages.push(assistantMessage);
 
+    // Emit any reasoning text the model produced
+    if (assistantMessage.content && typeof assistantMessage.content === 'string' && assistantMessage.content.trim()) {
+      emit(res, { type: 'reasoning', step: 'reasoning', timestamp: ts(), data: { text: assistantMessage.content.trim() } });
+    }
+
     // If no tool calls, we have the final answer
     if (!assistantMessage.tool_calls || assistantMessage.tool_calls.length === 0) {
       emit(res, { type: 'step-complete', step: 'reasoning', timestamp: ts(), data: { message: 'Model decided no more tools needed' } });
