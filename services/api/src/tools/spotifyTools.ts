@@ -56,11 +56,13 @@ async function spotifyFetch(
     // Provide actionable guidance for 403 errors
     if (res.status === 403) {
       const hint =
-        'This usually means the Spotify app is in Development Mode and the user has not been added ' +
-        'in the Spotify Developer Dashboard (Settings → User Management). ' +
-        'Ask the app owner to add your Spotify account, or submit the app for a quota extension. ' +
-        'If scopes were recently changed, disconnect and reconnect to Spotify to re-authorize.';
-      lastError = new Error(`Spotify API 403 Forbidden: ${errorMessage}. ${hint}`);
+        'This usually means the Spotify app is in Development Mode and the current access token ' +
+        'was obtained before the user was added as an authorized user in the Spotify Developer Dashboard ' +
+        '(Settings → User Management). ' +
+        'Please disconnect and reconnect to Spotify to re-authorize with updated permissions.';
+      const err = new Error(`Spotify API 403 Forbidden: ${errorMessage}. ${hint}`);
+      (err as Error & { requiresReauth: boolean }).requiresReauth = true;
+      lastError = err;
     } else {
       lastError = new Error(`Spotify API ${res.status}: ${errorMessage}`);
     }
@@ -292,6 +294,10 @@ export async function executeSpotifyTool(
         return { error: `Unknown Spotify tool: ${name}` };
     }
   } catch (err) {
-    return { error: err instanceof Error ? err.message : 'Spotify API call failed' };
+    const result: Record<string, unknown> = { error: err instanceof Error ? err.message : 'Spotify API call failed' };
+    if (err instanceof Error && (err as Error & { requiresReauth?: boolean }).requiresReauth) {
+      result.requiresReauth = true;
+    }
+    return result;
   }
 }

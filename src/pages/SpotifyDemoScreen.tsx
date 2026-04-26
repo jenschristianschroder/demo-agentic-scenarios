@@ -122,6 +122,20 @@ const SpotifyDemoScreen: React.FC = () => {
           const data = event.data as ToolCallRecord;
           setToolCalls((prev) => [...prev, data]);
           setPendingToolCall(null);
+
+          // Detect 403 / requiresReauth from Spotify tool results
+          const result = data.result as Record<string, unknown> | null;
+          if (result && result.requiresReauth === true) {
+            clearTokens();
+            setAuthenticated(false);
+            setAccessToken(null);
+            setUserProfile(null);
+            setError(
+              'Your Spotify session needs to be re-authorized. This usually happens when your account was recently added as an authorized user. Please reconnect to Spotify.'
+            );
+            setIsRunning(false);
+            setActiveStep(null);
+          }
         }
 
         if (event.type === 'step-complete') {
