@@ -164,7 +164,12 @@ const SpotifyDemoScreen: React.FC = () => {
                       alt={userProfile.displayName}
                     />
                   )}
-                  <span className="spotify-user-name">{userProfile.displayName}</span>
+                  <span className="spotify-user-name">
+                    {userProfile.displayName}
+                    {userProfile.email && (
+                      <span className="spotify-user-email">{userProfile.email}</span>
+                    )}
+                  </span>
                 </div>
               )}
               <button className="spotify-disconnect-btn" onClick={handleDisconnect} type="button">
