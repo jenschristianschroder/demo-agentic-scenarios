@@ -69,7 +69,7 @@ export async function startSpotifyLogin(): Promise<void> {
   localStorage.setItem('spotify_code_verifier', verifier);
   localStorage.setItem('spotify_auth_state', state);
 
-  // Build the authorisation URL using encodeURIComponent for every value.
+  // Build the authorization URL using encodeURIComponent for every value.
   // URLSearchParams encodes spaces as '+', but Spotify's OAuth server
   // requires '%20'.  When spaces are encoded as '+' the entire scope list
   // is interpreted as a single unrecognized scope, resulting in a token

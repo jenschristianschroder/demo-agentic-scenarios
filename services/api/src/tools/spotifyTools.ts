@@ -224,7 +224,7 @@ export async function getPlaylist(
 
 export async function createPlaylist(
   token: string,
-  args: { user_id?: string; name: string; description?: string; public?: boolean }
+  args: { name: string; description?: string; public?: boolean }
 ): Promise<unknown> {
   // Always resolve the authenticated user's ID from /me so we never rely on
   // the LLM passing the correct value.  The Spotify API only allows creating
