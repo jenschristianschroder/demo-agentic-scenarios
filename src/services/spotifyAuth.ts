@@ -144,21 +144,25 @@ export async function exchangeCode(code: string): Promise<void> {
   saveTokens(data);
 
   // Verify that the token carries the scopes we need for playlist management.
-  // If Spotify silently dropped scopes (e.g. due to encoding issues or app
-  // config), the user would see 403 errors on write operations later.
+  // Throw an error immediately so the failure surfaces on the callback page
+  // (which has error rendering) rather than silently deferring to playlist
+  // creation where it would produce a confusing 403.
   if (data.scope) {
     const grantedSet = new Set((data.scope as string).split(' '));
     const missing = REQUIRED_SCOPES.filter((s) => !grantedSet.has(s));
     if (missing.length > 0) {
-      console.warn(
-        `[Spotify Auth] Token is missing required scopes: ${missing.join(', ')}. ` +
-        `Granted scopes: ${data.scope}. Playlist write operations will fail with 403.`,
+      throw new Error(
+        `Spotify authorization is missing required scopes: ${missing.join(', ')}. ` +
+        `Granted scopes: ${data.scope}. ` +
+        `If your Spotify app is in Development Mode, ensure your account is listed under ` +
+        `Settings → User Management in the Spotify Developer Dashboard, then try connecting again.`,
       );
     }
   } else {
-    console.warn(
-      '[Spotify Auth] Token response did not include a "scope" field — ' +
-      'cannot verify that playlist-modify scopes were granted.',
+    throw new Error(
+      'Spotify did not return granted scopes — cannot verify that playlist-modify permissions were granted. ' +
+      'If your Spotify app is in Development Mode, ensure your account is listed under ' +
+      'Settings → User Management in the Spotify Developer Dashboard, then try connecting again.',
     );
   }
 
@@ -304,11 +308,12 @@ export function clearTokens(): void {
 
 /**
  * Get the list of required scopes that are missing from those granted by Spotify.
- * Returns an empty array if all required scopes are present.
+ * Returns the full REQUIRED_SCOPES list when no scope data is stored (conservative
+ * fallback — treats unknown scope state as missing to prevent silent 403 errors).
  */
 export function getMissingScopes(): string[] {
   const granted = localStorage.getItem('spotify_granted_scopes');
-  if (!granted) return []; // No scope info available — can't check
+  if (!granted) return [...REQUIRED_SCOPES]; // No scope info — assume all required scopes are missing
   const grantedSet = new Set(granted.split(' '));
   return REQUIRED_SCOPES.filter((s) => !grantedSet.has(s));
 }

@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import type { ToolStep, ToolEvent, ToolCallRecord, ToolDefinition, SpotifyRequest } from '../types';
 import { runSpotifyAgent } from '../services/spotifyApi';
-import { startSpotifyLogin, getAccessToken, isSpotifyAuthenticated, clearTokens, fetchSpotifyProfile, getMissingScopes } from '../services/spotifyAuth';
+import { startSpotifyLogin, getAccessToken, isSpotifyAuthenticated, clearTokens, fetchSpotifyProfile, getMissingScopes, getGrantedScopes } from '../services/spotifyAuth';
 import type { SpotifyUserProfile } from '../services/spotifyAuth';
 import ToolPipelineView from './components/ToolPipelineView';
 import ToolInventory from './components/ToolInventory';
@@ -61,6 +61,19 @@ const SpotifyDemoScreen: React.FC = () => {
     setMissingScopes([]);
   }, []);
 
+  const handleReconnect = useCallback(async () => {
+    clearTokens();
+    setAuthenticated(false);
+    setAccessToken(null);
+    setUserProfile(null);
+    setMissingScopes([]);
+    try {
+      await startSpotifyLogin();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to start Spotify login');
+    }
+  }, []);
+
   // ─── Controls state ───────────────────────────────────────────────────────
   const [prompt, setPrompt] = useState(
     "Create a playlist called 'Morning Run' with 10 energetic tracks"
@@ -82,6 +95,12 @@ const SpotifyDemoScreen: React.FC = () => {
 
   const handleRun = useCallback(async () => {
     if (!prompt.trim() || isRunning || !accessToken) return;
+
+    // Block execution if required write scopes are missing or unknown
+    if (getMissingScopes().length > 0) {
+      setError('Your Spotify token is missing required write permissions — please disconnect and reconnect to Spotify.');
+      return;
+    }
 
     // Ensure token is fresh
     const freshToken = await getAccessToken();
@@ -212,33 +231,37 @@ const SpotifyDemoScreen: React.FC = () => {
         )}
 
         {/* ── Missing scopes warning ─────────────────────────────── */}
-        {authenticated && missingScopes.length > 0 && (
+        {authenticated && (missingScopes.length > 0 || getGrantedScopes() === null) && (
           <div className="spotify-error" style={{ marginBottom: 16 }}>
-            <strong>⚠️ Missing Spotify permissions:</strong> Your token is missing the following
-            required scopes: <code>{missingScopes.join(', ')}</code>.
+            <strong>⚠️ Missing Spotify permissions:</strong>{' '}
+            {missingScopes.length > 0
+              ? <>Your token is missing the required scopes: <code>{missingScopes.join(', ')}</code>.</>
+              : <>Your token has no scope information — required write permissions cannot be verified.</>}
             <br />
             This typically means your Spotify app is in <strong>Development Mode</strong> and your
             account may not be properly added as a test user in the{' '}
             <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener noreferrer">
               Spotify Developer Dashboard
             </a>{' '}
-            (Settings → User Management). Please verify your account is listed, then{' '}
+            (Settings → User Management). Please verify your account is listed, then reconnect to re-authorize.
+            <br />
             <button
               type="button"
-              onClick={handleDisconnect}
+              onClick={handleReconnect}
               style={{
-                background: 'none',
+                marginTop: 10,
+                padding: '8px 18px',
+                borderRadius: 6,
                 border: 'none',
-                color: 'inherit',
-                textDecoration: 'underline',
+                background: '#1DB954',
+                color: '#fff',
+                fontWeight: 600,
                 cursor: 'pointer',
-                padding: 0,
-                font: 'inherit',
+                fontSize: '0.9em',
               }}
             >
-              disconnect
-            </button>{' '}
-            and reconnect to re-authorize.
+              Disconnect &amp; Reconnect
+            </button>
           </div>
         )}
 
@@ -287,7 +310,7 @@ const SpotifyDemoScreen: React.FC = () => {
               <button
                 className="run-btn spotify-run-btn"
                 onClick={handleRun}
-                disabled={isRunning || !prompt.trim() || !accessToken}
+                disabled={isRunning || !prompt.trim() || !accessToken || missingScopes.length > 0}
                 type="button"
               >
                 {isRunning ? (

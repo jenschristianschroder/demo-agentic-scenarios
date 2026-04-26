@@ -138,3 +138,34 @@ docker push $ACR/multi-agent-spa:latest
 - `action` — generate / fact-check / revise / approve / reject
 - `reason` — Human-readable explanation
 - `iteration` / `maxIterations` — Loop tracking
+
+## Spotify Demo Setup
+
+The Spotify Playlist Agent demo requires a Spotify Developer application configured with the PKCE OAuth flow.
+
+### Required OAuth Scopes
+
+The following scopes must be granted for the agent to create and manage playlists:
+
+| Scope | Purpose |
+|-------|---------|
+| `user-read-private` | Read user profile |
+| `user-read-email` | Read user email |
+| `playlist-read-private` | List existing playlists |
+| `playlist-modify-public` | Create and edit public playlists |
+| `playlist-modify-private` | Create and edit private playlists |
+
+### Spotify Developer Dashboard — Development Mode
+
+If your Spotify app is in **Development Mode** (the default for new apps), Spotify restricts API write access to explicitly approved users only. **All users who will use this demo must be added under Settings → User Management** in the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard).
+
+Without this, write operations such as creating playlists will silently fail with a **403 Forbidden** error even though the OAuth flow completes successfully and read operations (search, profile) appear to work.
+
+Steps to add a user:
+1. Open your app in the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard).
+2. Go to **Settings → User Management**.
+3. Add the Spotify account email address of each user who needs access.
+4. Ask the user to **Disconnect and Reconnect** to Spotify in the demo to obtain a fresh token.
+
+To remove the user limit, submit your app for a [Quota Extension](https://developer.spotify.com/documentation/web-api/concepts/quota-modes) via the Developer Dashboard.
+
