@@ -30,8 +30,8 @@ export async function reviewImage(
 
   const userMessage = `Original concept: ${concept}
 Requested style: ${style}
-Prompt sent to DALL-E 3: ${refinedPrompt}
-DALL-E 3 revised prompt (what was actually generated): ${revisedPrompt}
+Prompt sent to gpt-image-2: ${refinedPrompt}
+gpt-image-2 revised prompt (what was actually generated): ${revisedPrompt}
 Iteration: ${iteration}
 
 Please review this generation and provide your assessment.`;

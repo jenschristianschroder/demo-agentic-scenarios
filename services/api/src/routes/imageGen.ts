@@ -1,6 +1,6 @@
 // ─── Image Generation Route ──────────────────────────────────────────────────
 // POST /api/image-gen/run
-// Orchestrates: Prompt Engineer → DALL-E 3 → Art Director (optional revision loop)
+// Orchestrates: Prompt Engineer → gpt-image-2 → Art Director (optional revision loop)
 // Streams progress as Server-Sent Events.
 
 import { Router } from 'express';
@@ -15,7 +15,7 @@ import type {
   ImageSize,
   ImageQuality,
 } from '../types.js';
-import { getDalleClient, getDalleDeployment, isDalleConfigured } from '../azureClients.js';
+import { getImageClient, getImageDeployment, isImageConfigured } from '../azureClients.js';
 import { engineerPrompt, mockEngineerPrompt } from '../agents/promptEngineerAgent.js';
 import { reviewImage, mockReviewImage } from '../agents/artDirectorAgent.js';
 
@@ -117,7 +117,7 @@ async function runImageGenPipeline(
   creativityLevel: number,
   res: Response
 ): Promise<void> {
-  const useMock = !isDalleConfigured();
+  const useMock = !isImageConfigured();
 
   // ── Step 1: User request ─────────────────────────────────────────────
   emit(res, { type: 'step-start', step: 'user-request', timestamp: now(), data: { concept } });
@@ -157,11 +157,11 @@ async function runImageGenPipeline(
         iteration,
       };
     } else {
-      const dalleClient = getDalleClient();
-      const deployment = getDalleDeployment();
+      const imageClient = getImageClient();
+      const deployment = getImageDeployment();
       const genStart = Date.now();
 
-      const imgResponse = await dalleClient.images.generate({
+      const imgResponse = await imageClient.images.generate({
         model: deployment,
         prompt: promptOutput.refinedPrompt,
         n: 1,
@@ -172,7 +172,7 @@ async function runImageGenPipeline(
 
       const generationDurationMs = Date.now() - genStart;
       const imageData = imgResponse.data?.[0];
-      if (!imageData?.url) throw new Error('DALL-E 3 returned no image URL');
+      if (!imageData?.url) throw new Error('gpt-image-2 returned no image URL');
 
       imageOutput = {
         imageUrl: imageData.url,

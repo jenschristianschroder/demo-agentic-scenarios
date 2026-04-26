@@ -8,7 +8,7 @@ const AZURE_OPENAI_ENDPOINT = process.env.AZURE_OPENAI_ENDPOINT;
 const AZURE_OPENAI_DEPLOYMENT = process.env.AZURE_OPENAI_DEPLOYMENT || 'gpt-4o';
 const AZURE_OPENAI_REASONING_DEPLOYMENT = process.env.AZURE_OPENAI_REASONING_DEPLOYMENT;
 const AZURE_OPENAI_MODEL_ROUTER_DEPLOYMENT = process.env.AZURE_OPENAI_MODEL_ROUTER_DEPLOYMENT || 'model-router';
-const AZURE_OPENAI_DALLE_DEPLOYMENT = process.env.AZURE_OPENAI_DALLE_DEPLOYMENT || 'dall-e-3';
+const AZURE_OPENAI_IMAGE_DEPLOYMENT = process.env.AZURE_OPENAI_IMAGE_DEPLOYMENT || 'gpt-image-2';
 
 if (!AZURE_OPENAI_ENDPOINT) {
   throw new Error('AZURE_OPENAI_ENDPOINT environment variable is required');
@@ -96,31 +96,31 @@ export function isModelRouterConfigured(): boolean {
   return !!AZURE_OPENAI_MODEL_ROUTER_DEPLOYMENT;
 }
 
-// ─── Singleton DALL-E client ──────────────────────────────────────────────────
+// ─── Singleton image generation client ────────────────────────────────────────
 
-let dalleClient: AzureOpenAI | undefined;
+let imageClient: AzureOpenAI | undefined;
 
 /**
- * Returns the Azure OpenAI client configured for the DALL-E 3 image generation deployment.
- * Uses the AZURE_OPENAI_DALLE_DEPLOYMENT environment variable (default: 'dall-e-3').
+ * Returns the Azure OpenAI client configured for the gpt-image-2 image generation deployment.
+ * Uses the AZURE_OPENAI_IMAGE_DEPLOYMENT environment variable (default: 'gpt-image-2').
  */
-export function getDalleClient(): AzureOpenAI {
-  if (!dalleClient) {
-    dalleClient = new AzureOpenAI({
+export function getImageClient(): AzureOpenAI {
+  if (!imageClient) {
+    imageClient = new AzureOpenAI({
       azureADTokenProvider,
       endpoint: AZURE_OPENAI_ENDPOINT,
-      deployment: AZURE_OPENAI_DALLE_DEPLOYMENT,
+      deployment: AZURE_OPENAI_IMAGE_DEPLOYMENT,
       apiVersion: '2024-02-01',
     });
   }
-  return dalleClient;
+  return imageClient;
 }
 
-export function getDalleDeployment(): string {
-  return AZURE_OPENAI_DALLE_DEPLOYMENT;
+export function getImageDeployment(): string {
+  return AZURE_OPENAI_IMAGE_DEPLOYMENT;
 }
 
-export function isDalleConfigured(): boolean {
+export function isImageConfigured(): boolean {
   return !!AZURE_OPENAI_ENDPOINT;
 }
 

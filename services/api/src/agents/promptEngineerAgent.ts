@@ -1,14 +1,14 @@
 // ─── Prompt Engineer Agent ────────────────────────────────────────────────────
 // Takes the user's creative concept and style preference, and crafts an
-// optimised DALL-E 3 prompt with style notes and composition guidance.
+// optimised gpt-image-2 prompt with style notes and composition guidance.
 
 import type { PromptEngineerOutput } from '../types.js';
 import { getOpenAIClient } from '../azureClients.js';
 
-const SYSTEM_PROMPT = `You are an expert DALL-E 3 prompt engineer. Your job is to transform a user's creative concept into a highly effective image-generation prompt.
+const SYSTEM_PROMPT = `You are an expert gpt-image-2 prompt engineer. Your job is to transform a user's creative concept into a highly effective image-generation prompt.
 
 Guidelines:
-- Write a single, detailed, vivid prompt optimised for DALL-E 3 (typically 50-150 words).
+- Write a single, detailed, vivid prompt optimised for gpt-image-2 (typically 50-150 words).
 - Incorporate the requested style naturally into the prompt language.
 - Include lighting, atmosphere, colour palette, and compositional details.
 - Avoid prohibited content (violence, nudity, real people by name, copyrighted characters).
