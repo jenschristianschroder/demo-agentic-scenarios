@@ -129,23 +129,6 @@ const SpotifyDemoScreen: React.FC = () => {
           const data = event.data as ToolCallRecord;
           setToolCalls((prev) => [...prev, data]);
           setPendingToolCall(null);
-
-          // Detect 403 / requiresReauth from Spotify tool results.
-          // Clear tokens and access-token state so the user cannot re-run
-          // with the same (insufficient) token, but keep `authenticated`
-          // true so the UI — including the error message and tool timeline —
-          // stays visible. The user can click "Disconnect" in the header
-          // and then reconnect to re-authorize.
-          const result = data.result as Record<string, unknown> | null;
-          if (result && result.requiresReauth === true) {
-            clearTokens();
-            setAccessToken(null);
-            setError(
-              'Your Spotify session needs to be re-authorized. This usually happens when your account was recently added as an authorized user. Please disconnect and reconnect to Spotify using the button in the top-right corner.'
-            );
-            setIsRunning(false);
-            setActiveStep(null);
-          }
         }
 
         if (event.type === 'step-complete') {

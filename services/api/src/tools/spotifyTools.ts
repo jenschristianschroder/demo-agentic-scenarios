@@ -56,13 +56,13 @@ async function spotifyFetch(
     // Provide actionable guidance for 403 errors
     if (res.status === 403) {
       const hint =
-        'This usually means the Spotify app is in Development Mode and the current access token ' +
-        'was obtained before the user was added as an authorized user in the Spotify Developer Dashboard ' +
-        '(Settings → User Management). ' +
-        'Please disconnect and reconnect to Spotify to re-authorize with updated permissions.';
-      const err = new Error(`Spotify API 403 Forbidden: ${errorMessage}. ${hint}`);
-      (err as Error & { requiresReauth: boolean }).requiresReauth = true;
-      lastError = err;
+        'This is most commonly caused by the Spotify app not having the required API access level. ' +
+        'Please check the following in the Spotify Developer Dashboard (https://developer.spotify.com/dashboard):\n' +
+        '1. Ensure the app has "Web API" enabled and has been granted Extended Quota Mode for write operations (e.g. playlist creation). ' +
+        'Apps on the free tier can only perform read operations.\n' +
+        '2. If the app is in Development Mode, verify the user is listed under Settings → User Management.\n' +
+        '3. If the user was recently added, try disconnecting and reconnecting to Spotify to re-authorize.';
+      lastError = new Error(`Spotify API 403 Forbidden: ${errorMessage}. ${hint}`);
     } else {
       lastError = new Error(`Spotify API ${res.status}: ${errorMessage}`);
     }
@@ -294,10 +294,6 @@ export async function executeSpotifyTool(
         return { error: `Unknown Spotify tool: ${name}` };
     }
   } catch (err) {
-    const result: Record<string, unknown> = { error: err instanceof Error ? err.message : 'Spotify API call failed' };
-    if (err instanceof Error && (err as Error & { requiresReauth?: boolean }).requiresReauth) {
-      result.requiresReauth = true;
-    }
-    return result;
+    return { error: err instanceof Error ? err.message : 'Spotify API call failed' };
   }
 }
