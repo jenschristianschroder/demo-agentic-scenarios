@@ -29,7 +29,7 @@ const TOOLS: ChatCompletionTool[] = [
     type: 'function',
     function: {
       name: 'search_tracks',
-      description: 'Search for tracks on Spotify by query (artist, track name, genre, etc). Returns track IDs, names, artists, and URIs.',
+      description: 'Search for tracks on Spotify by query (artist, track name, genre, mood, etc). Returns track IDs, names, artists, and URIs. Use multiple targeted queries to discover varied tracks for a playlist.',
       parameters: {
         type: 'object',
         properties: {
@@ -37,34 +37,6 @@ const TOOLS: ChatCompletionTool[] = [
           limit: { type: 'number', description: 'Number of results to return (default: 10, max: 50)' },
         },
         required: ['query'],
-        additionalProperties: false,
-      },
-    },
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'get_recommendations',
-      description: 'Get track recommendations based on seed tracks and/or genres. Optionally target energy, danceability, or valence.',
-      parameters: {
-        type: 'object',
-        properties: {
-          seed_tracks: {
-            type: 'array',
-            items: { type: 'string' },
-            description: 'Up to 5 Spotify track IDs to use as seeds',
-          },
-          seed_genres: {
-            type: 'array',
-            items: { type: 'string' },
-            description: 'Up to 5 genre names (e.g. "rock", "jazz", "electronic")',
-          },
-          limit: { type: 'number', description: 'Number of recommendations (default: 10, max: 100)' },
-          target_energy: { type: 'number', description: 'Target energy 0.0–1.0 (1.0 = most energetic)' },
-          target_danceability: { type: 'number', description: 'Target danceability 0.0–1.0' },
-          target_valence: { type: 'number', description: 'Target valence 0.0–1.0 (1.0 = most positive/happy)' },
-        },
-        required: [],
         additionalProperties: false,
       },
     },
@@ -169,13 +141,13 @@ const SYSTEM_PROMPT = `You are a Spotify music curator and playlist manager. You
 
 IMPORTANT RULES:
 - Use the tools to interact with Spotify on behalf of the user. Do NOT make up track names, IDs, or URIs.
-- When adding tracks to a playlist, first search for or get recommendations to obtain valid track URIs.
+- When adding tracks to a playlist, first search for tracks using search_tracks to obtain valid track URIs.
 - When the user asks you to create a playlist with tracks, follow this workflow:
-  1. search_tracks or get_recommendations → get track URIs
-  2. create_playlist → get playlist_id (the user ID is resolved automatically)
+  1. search_tracks (run multiple queries to gather enough diverse tracks)
+  2. create_playlist → get playlist_id
   3. add_tracks_to_playlist → add the tracks
-- You may call multiple tools if needed.
-- When the user mentions a genre or mood, use search queries or get_recommendations with appropriate parameters.
+- Use multiple search_tracks calls with varied queries (e.g. by mood, genre, artist, tempo descriptor) to build a full and diverse track list.
+- When the user mentions a genre or mood, craft search queries that match (e.g. "energetic rock workout", "calm jazz piano").
 - Always provide a clear, well-formatted final answer summarizing what you did, including playlist names, track lists, and links when available.
 - If a Spotify API error occurs, explain it clearly to the user.
 - If a 403 Forbidden error occurs on a write operation (creating playlists, adding/removing tracks), explain that the access token likely lacks the required scopes (playlist-modify-public / playlist-modify-private). The most common fix is to disconnect and reconnect to Spotify to obtain a fresh token. If the Spotify app is in Development Mode, the user may also need to be added under Settings → User Management in the Spotify Developer Dashboard.`;
