@@ -5,6 +5,7 @@ RUN npm ci
 COPY tsconfig*.json vite.config.ts index.html ./
 COPY src ./src
 COPY public ./public
+ARG VITE_SPOTIFY_CLIENT_ID
 RUN npm run build
 
 FROM nginx:alpine
