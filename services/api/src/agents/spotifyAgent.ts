@@ -417,8 +417,8 @@ async function runSpotifyAgentChat(
   maxToolCalls: number,
   res: Response
 ): Promise<void> {
-  const client = getOpenAIClient();
-  const deployment = process.env.AZURE_OPENAI_DEPLOYMENT || 'gpt-4o';
+  const client = getReasoningClient() ?? getOpenAIClient();
+  const deployment = getReasoningDeployment() ?? process.env.AZURE_OPENAI_DEPLOYMENT ?? 'gpt-4o';
   const toolCalls: ToolCallRecord[] = [];
   let callCounter = 0;
   const maxRounds = maxToolCalls > 0 ? maxToolCalls : DEFAULT_MAX_TOOL_ROUNDS;
