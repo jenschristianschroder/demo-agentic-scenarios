@@ -167,7 +167,6 @@ async function runImageGenPipeline(
         n: 1,
         size,
         quality,
-        response_format: 'url',
       });
 
       const generationDurationMs = Date.now() - genStart;
