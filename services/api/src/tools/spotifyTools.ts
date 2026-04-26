@@ -90,7 +90,15 @@ function sleep(ms: number): Promise<void> {
 // ─── Tool: get_current_user ──────────────────────────────────────────────────
 
 export async function getCurrentUser(token: string): Promise<unknown> {
-  return spotifyFetch(token, '/me');
+  const data = (await spotifyFetch(token, '/me')) as Record<string, unknown>;
+  // Return only the fields needed by the agent to avoid confusion between
+  // `id` (the plain user ID required by other endpoints) and similar-looking
+  // fields like `uri` ("spotify:user:xxx") or `href` (a full URL).
+  return {
+    id: data.id,
+    display_name: data.display_name,
+    email: data.email,
+  };
 }
 
 // ─── Tool: search_tracks ─────────────────────────────────────────────────────
@@ -216,9 +224,16 @@ export async function getPlaylist(
 
 export async function createPlaylist(
   token: string,
-  args: { user_id: string; name: string; description?: string; public?: boolean }
+  args: { name: string; description?: string; public?: boolean }
 ): Promise<unknown> {
-  const data = (await spotifyFetch(token, `/users/${encodeURIComponent(args.user_id)}/playlists`, {
+  // Always resolve the authenticated user's ID from /me so we never rely on
+  // the LLM passing the correct value.  The Spotify API only allows creating
+  // playlists for the currently authenticated user, so using /me is the
+  // safest approach and avoids 403 errors caused by an incorrect user_id.
+  const me = (await spotifyFetch(token, '/me')) as Record<string, unknown>;
+  const userId = me.id as string;
+
+  const data = (await spotifyFetch(token, `/users/${encodeURIComponent(userId)}/playlists`, {
     method: 'POST',
     body: JSON.stringify({
       name: args.name,

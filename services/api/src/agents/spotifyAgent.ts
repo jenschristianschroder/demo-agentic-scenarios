@@ -103,16 +103,15 @@ const TOOLS: ChatCompletionTool[] = [
     type: 'function',
     function: {
       name: 'create_playlist',
-      description: 'Create a new playlist for the user. Requires the user ID (get it via get_current_user first).',
+      description: 'Create a new playlist for the current authenticated user.',
       parameters: {
         type: 'object',
         properties: {
-          user_id: { type: 'string', description: 'The Spotify user ID (from get_current_user)' },
           name: { type: 'string', description: 'Name of the new playlist' },
           description: { type: 'string', description: 'Description for the playlist' },
           public: { type: 'boolean', description: 'Whether the playlist should be public (default: false)' },
         },
-        required: ['user_id', 'name'],
+        required: ['name'],
         additionalProperties: false,
       },
     },
@@ -170,13 +169,11 @@ const SYSTEM_PROMPT = `You are a Spotify music curator and playlist manager. You
 
 IMPORTANT RULES:
 - Use the tools to interact with Spotify on behalf of the user. Do NOT make up track names, IDs, or URIs.
-- Before creating a playlist, ALWAYS call get_current_user first to get the user_id.
 - When adding tracks to a playlist, first search for or get recommendations to obtain valid track URIs.
 - When the user asks you to create a playlist with tracks, follow this workflow:
-  1. get_current_user → get user_id
-  2. search_tracks or get_recommendations → get track URIs
-  3. create_playlist → get playlist_id
-  4. add_tracks_to_playlist → add the tracks
+  1. search_tracks or get_recommendations → get track URIs
+  2. create_playlist → get playlist_id (the user ID is resolved automatically)
+  3. add_tracks_to_playlist → add the tracks
 - You may call multiple tools if needed.
 - When the user mentions a genre or mood, use search queries or get_recommendations with appropriate parameters.
 - Always provide a clear, well-formatted final answer summarizing what you did, including playlist names, track lists, and links when available.
