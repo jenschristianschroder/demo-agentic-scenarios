@@ -69,18 +69,23 @@ export async function startSpotifyLogin(): Promise<void> {
   localStorage.setItem('spotify_code_verifier', verifier);
   localStorage.setItem('spotify_auth_state', state);
 
+  // Build the query string manually for the scope parameter.
+  // URLSearchParams encodes spaces as '+', but Spotify's OAuth server
+  // requires '%20'.  When spaces are encoded as '+' the entire scope list
+  // is interpreted as a single unrecognized scope, resulting in a token
+  // with **no** valid scopes – reads that don't require a scope still
+  // work (profile, search) while writes (create playlist) fail with 403.
   const params = new URLSearchParams({
     client_id: clientId,
     response_type: 'code',
     redirect_uri: redirectUri,
-    scope: SCOPES,
     code_challenge_method: 'S256',
     code_challenge: challenge,
     state,
     show_dialog: 'true',
   });
 
-  const authUrl = `${SPOTIFY_AUTH_URL}?${params}`;
+  const authUrl = `${SPOTIFY_AUTH_URL}?${params}&scope=${encodeURIComponent(SCOPES)}`;
 
   // Navigate the top-level window so Spotify's login page is not loaded inside
   // an iframe (which Spotify's CSP would block).  The SPA is typically embedded

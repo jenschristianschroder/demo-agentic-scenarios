@@ -53,15 +53,19 @@ async function spotifyFetch(
       errorMessage = errorBody;
     }
 
+    // Log full error details to help diagnose persistent issues
+    console.error(
+      `[Spotify API Error] ${options.method ?? 'GET'} ${url} → ${res.status}: ${errorMessage}`
+    );
+
     // Provide actionable guidance for 403 errors
     if (res.status === 403) {
       const hint =
-        'This is most commonly caused by the Spotify app not having the required API access level. ' +
-        'Please check the following in the Spotify Developer Dashboard (https://developer.spotify.com/dashboard):\n' +
-        '1. Ensure the app has "Web API" enabled and has been granted Extended Quota Mode for write operations (e.g. playlist creation). ' +
-        'Apps on the free tier can only perform read operations.\n' +
-        '2. If the app is in Development Mode, verify the user is listed under Settings → User Management.\n' +
-        '3. If the user was recently added, try disconnecting and reconnecting to Spotify to re-authorize.';
+        'This usually means the access token does not have the required scopes (e.g. playlist-modify-public, playlist-modify-private). ' +
+        'Common causes:\n' +
+        '1. The OAuth scope parameter was not encoded correctly (spaces must be %20, not +).\n' +
+        '2. The user needs to disconnect and reconnect to Spotify to obtain a fresh token with the correct scopes.\n' +
+        '3. If the Spotify app is in Development Mode, verify the user is listed under Settings → User Management in the Spotify Developer Dashboard.';
       lastError = new Error(`Spotify API 403 Forbidden: ${errorMessage}. ${hint}`);
     } else {
       lastError = new Error(`Spotify API ${res.status}: ${errorMessage}`);

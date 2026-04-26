@@ -181,11 +181,7 @@ IMPORTANT RULES:
 - When the user mentions a genre or mood, use search queries or get_recommendations with appropriate parameters.
 - Always provide a clear, well-formatted final answer summarizing what you did, including playlist names, track lists, and links when available.
 - If a Spotify API error occurs, explain it clearly to the user.
-- If a 403 Forbidden error occurs on a write operation (creating playlists, adding/removing tracks), explain the most likely causes:
-  1. The Spotify app may need Extended Quota Mode enabled in the Spotify Developer Dashboard to allow write operations. Apps on the free tier can only perform read operations (search, get profile, etc.).
-  2. If the app is in Development Mode, the user may need to be added under Settings → User Management in the Spotify Developer Dashboard.
-  3. If the user was recently added, they may need to disconnect and reconnect to Spotify.
-  Always mention the Spotify Developer Dashboard (https://developer.spotify.com/dashboard) and suggest the user or app owner check the API access level. Do NOT only suggest reconnecting — that alone will not fix the issue if the app lacks the required access level.`;
+- If a 403 Forbidden error occurs on a write operation (creating playlists, adding/removing tracks), explain that the access token likely lacks the required scopes (playlist-modify-public / playlist-modify-private). The most common fix is to disconnect and reconnect to Spotify to obtain a fresh token. If the Spotify app is in Development Mode, the user may also need to be added under Settings → User Management in the Spotify Developer Dashboard.`;
 
 // Higher than the default 10 because Spotify workflows often require several
 // sequential steps (get user → search → create playlist → add tracks).
