@@ -79,6 +79,7 @@ const SpotifyDemoScreen: React.FC = () => {
     "Create a playlist called 'Morning Run' with 10 energetic tracks"
   );
   const [creativityLevel, setCreativityLevel] = useState(0.3);
+  const [maxToolCalls, setMaxToolCalls] = useState(20);
 
   // ─── Pipeline state ───────────────────────────────────────────────────────
   const [isRunning, setIsRunning] = useState(false);
@@ -125,6 +126,7 @@ const SpotifyDemoScreen: React.FC = () => {
       prompt: prompt.trim(),
       creativityLevel,
       accessToken: freshToken,
+      maxToolCalls,
     };
 
     try {
@@ -170,7 +172,7 @@ const SpotifyDemoScreen: React.FC = () => {
       setIsRunning(false);
       setActiveStep(null);
     }
-  }, [prompt, creativityLevel, isRunning, accessToken]);
+  }, [prompt, creativityLevel, maxToolCalls, isRunning, accessToken]);
 
   const calledToolNames = toolCalls.map((tc) => tc.toolName);
 
@@ -303,6 +305,27 @@ const SpotifyDemoScreen: React.FC = () => {
                   <div className="slider-labels">
                     <span>Precise</span>
                     <span>Creative</span>
+                  </div>
+                </div>
+
+                <div className="control-group control-group-half">
+                  <label className="control-label" htmlFor="spotify-max-tool-calls-slider">
+                    Max Tool Calls <span className="control-value">{maxToolCalls}</span>
+                  </label>
+                  <input
+                    id="spotify-max-tool-calls-slider"
+                    type="range"
+                    className="control-slider"
+                    min={5}
+                    max={40}
+                    step={5}
+                    value={maxToolCalls}
+                    onChange={(e) => setMaxToolCalls(parseInt(e.target.value, 10))}
+                    disabled={isRunning}
+                  />
+                  <div className="slider-labels">
+                    <span>Fewer</span>
+                    <span>More</span>
                   </div>
                 </div>
               </div>

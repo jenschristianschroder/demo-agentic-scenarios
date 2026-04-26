@@ -162,31 +162,35 @@ export const SPOTIFY_TOOL_DEFINITIONS: ToolDefinition[] = TOOLS.map((t) => ({
 
 const WEB_SEARCH_RULES = `- When the user asks about a genre, mood, artist, activity, or any music topic, start by calling web_search to gather context (e.g. well-known tracks, key artists, characteristics of the genre). Use this research to craft better Spotify search queries.
 - When the user asks you to create a playlist with tracks, follow this workflow:
-  1. web_search (research the genre/mood/theme to identify key artists and tracks)
-  2. search_tracks (run multiple targeted queries based on your research to gather diverse tracks)
-  3. create_playlist → get playlist_id
-  4. add_tracks_to_playlist → add the tracks`;
+  1. web_search (research the genre/mood/theme — do multiple searches to find key artists, iconic tracks, and hidden gems)
+  2. web_search again if needed to dig deeper (e.g. search for "best [sub-genre] tracks", "underrated [mood] songs", "[decade] [genre] classics")
+  3. search_tracks (run multiple targeted queries based on your research — aim for at least 3–5 different queries to gather a diverse, high-quality pool of tracks)
+  4. create_playlist → get playlist_id
+  5. add_tracks_to_playlist → add the best tracks from your pool`;
 
 const NO_WEB_SEARCH_RULES = `- When the user asks you to create a playlist with tracks, follow this workflow:
-  1. search_tracks (run multiple targeted queries to gather diverse tracks)
+  1. search_tracks (run at least 3–5 varied targeted queries to gather a diverse, high-quality pool of tracks)
   2. create_playlist → get playlist_id
-  3. add_tracks_to_playlist → add the tracks`;
+  3. add_tracks_to_playlist → add the best tracks from your pool`;
 
 const SYSTEM_PROMPT = `You are a Spotify music curator and playlist manager. You help users create, manage, and discover music through their Spotify account.
+
+Your goal is to produce the ABSOLUTE BEST result for every user request. Do thorough, multi-turn research before taking action — don't rush to create a playlist with the first tracks you find.
 
 IMPORTANT RULES:
 - Use the tools to interact with Spotify on behalf of the user. Do NOT make up track names, IDs, or URIs.
 ${WEB_SEARCH_AVAILABLE ? WEB_SEARCH_RULES : NO_WEB_SEARCH_RULES}
 - When adding tracks to a playlist, always use search_tracks to obtain valid track URIs.
-- Use multiple search_tracks calls with varied queries (e.g. by mood, genre, artist, tempo descriptor) to build a full and diverse track list.
-- When the user mentions a genre or mood, craft search queries that match (e.g. "energetic rock workout", "calm jazz piano").
-- Always provide a clear, well-formatted final answer summarizing what you did, including playlist names, track lists, and links when available.
+- Use multiple search_tracks calls with varied queries (e.g. by mood, genre, artist, tempo descriptor, decade) to build a full and diverse track list. Never rely on a single query.
+- Aim for quality and variety: mix iconic classics with hidden gems, different sub-genres, different tempos, and different artists. Avoid repeating the same artist more than twice unless the user specifically asks for an artist-focused playlist.
+- When the user mentions a genre or mood, craft search queries that match deeply (e.g. "energetic rock workout", "calm jazz piano", "late night lo-fi hip hop", "upbeat 80s pop").
+- Always provide a clear, well-formatted final answer summarizing what you did, including the playlist name, a track list with artists, and a link to the playlist when available.
 - If a Spotify API error occurs, explain it clearly to the user.
 - If a 403 Forbidden error occurs on a write operation (creating playlists, adding/removing tracks), explain that the access token likely lacks the required scopes (playlist-modify-public / playlist-modify-private). The most common fix is to disconnect and reconnect to Spotify to obtain a fresh token. If the Spotify app is in Development Mode, the user may also need to be added under Settings → User Management in the Spotify Developer Dashboard.`;
 
 // Higher than the default 10 because Spotify workflows often require several
 // sequential steps (web search → search tracks → create playlist → add tracks).
-const MAX_TOOL_ROUNDS = 20;
+const DEFAULT_MAX_TOOL_ROUNDS = 20;
 
 /**
  * Run the Spotify playlist agent, streaming events via SSE.
@@ -195,12 +199,14 @@ export async function runSpotifyAgent(
   prompt: string,
   creativityLevel: number,
   accessToken: string,
+  maxToolCalls: number,
   res: Response
 ): Promise<void> {
   const client = getOpenAIClient();
   const deployment = process.env.AZURE_OPENAI_DEPLOYMENT || 'gpt-4o';
   const toolCalls: ToolCallRecord[] = [];
   let callCounter = 0;
+  const maxRounds = maxToolCalls > 0 ? maxToolCalls : DEFAULT_MAX_TOOL_ROUNDS;
 
   const ts = () => new Date().toISOString();
 
@@ -219,7 +225,7 @@ export async function runSpotifyAgent(
 
   let round = 0;
 
-  while (round < MAX_TOOL_ROUNDS) {
+  while (round < maxRounds) {
     round++;
 
     const response = await client.chat.completions.create({
