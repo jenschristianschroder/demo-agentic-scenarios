@@ -6,6 +6,7 @@ import { AzureOpenAI } from 'openai';
 
 const AZURE_OPENAI_ENDPOINT = process.env.AZURE_OPENAI_ENDPOINT;
 const AZURE_OPENAI_DEPLOYMENT = process.env.AZURE_OPENAI_DEPLOYMENT || 'gpt-4o';
+const AZURE_OPENAI_REASONING_DEPLOYMENT = process.env.AZURE_OPENAI_REASONING_DEPLOYMENT;
 
 if (!AZURE_OPENAI_ENDPOINT) {
   throw new Error('AZURE_OPENAI_ENDPOINT environment variable is required');
@@ -36,6 +37,32 @@ export function getOpenAIClient(): AzureOpenAI {
     });
   }
   return openaiClient;
+}
+
+// ─── Singleton reasoning client (Responses API, GPT-5 / o-series) ────────────
+
+let reasoningClient: AzureOpenAI | undefined;
+
+/**
+ * Returns the Azure OpenAI client configured for the reasoning model deployment.
+ * Uses the Responses API (2025-04-01-preview) and the AZURE_OPENAI_REASONING_DEPLOYMENT
+ * environment variable. Returns undefined when no reasoning deployment is configured.
+ */
+export function getReasoningClient(): AzureOpenAI | undefined {
+  if (!AZURE_OPENAI_REASONING_DEPLOYMENT) return undefined;
+  if (!reasoningClient) {
+    reasoningClient = new AzureOpenAI({
+      azureADTokenProvider,
+      endpoint: AZURE_OPENAI_ENDPOINT,
+      deployment: AZURE_OPENAI_REASONING_DEPLOYMENT,
+      apiVersion: '2025-04-01-preview',
+    });
+  }
+  return reasoningClient;
+}
+
+export function getReasoningDeployment(): string | undefined {
+  return AZURE_OPENAI_REASONING_DEPLOYMENT;
 }
 
 // ─── Singleton Search client ─────────────────────────────────────────────────

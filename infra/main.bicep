@@ -24,6 +24,9 @@ param imageTag string
 @secure()
 param tavilyApiKey string = ''
 
+@description('Azure OpenAI reasoning model deployment name (optional — enables GPT-5 / o-series reasoning in the Spotify agent)')
+param openAIReasoningDeployment string = ''
+
 // ─── Derived names ───────────────────────────────────────────────────────────
 
 var acrName = '${replace('${appName}acr', '-', '')}${uniqueString(resourceGroup().id)}'
@@ -96,6 +99,7 @@ module apiApp 'modules/aca-api.bicep' = {
     searchIndex: searchIndex
     acrLoginServer: acr.outputs.loginServer
     tavilyApiKey: tavilyApiKey
+    openAIReasoningDeployment: openAIReasoningDeployment
   }
 }
 

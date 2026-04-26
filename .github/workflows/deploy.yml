@@ -55,6 +55,7 @@ jobs:
           parameters: >-
             imageTag=${{ github.sha }}
             tavilyApiKey=${{ secrets.TAVILY_API_KEY }}
+            openAIReasoningDeployment=${{ secrets.AZURE_OPENAI_REASONING_DEPLOYMENT }}
           failOnStdErr: false
 
       - name: Validate infra deployment failure reason
