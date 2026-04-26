@@ -77,6 +77,7 @@ export async function startSpotifyLogin(): Promise<void> {
     code_challenge_method: 'S256',
     code_challenge: challenge,
     state,
+    show_dialog: 'true',
   });
 
   const authUrl = `${SPOTIFY_AUTH_URL}?${params}`;
