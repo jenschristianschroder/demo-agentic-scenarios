@@ -15,7 +15,7 @@ import type {
   ImageSize,
   ImageQuality,
 } from '../types.js';
-import { getDalleClient, getDalleDeployment, isDalleConfigured } from '../azureClients.js';
+import { getImageClient, getImageDeployment, isImageConfigured } from '../azureClients.js';
 import { engineerPrompt, mockEngineerPrompt } from '../agents/promptEngineerAgent.js';
 import { reviewImage, mockReviewImage } from '../agents/artDirectorAgent.js';
 
@@ -117,7 +117,7 @@ async function runImageGenPipeline(
   creativityLevel: number,
   res: Response
 ): Promise<void> {
-  const useMock = !isDalleConfigured();
+  const useMock = !isImageConfigured();
 
   // ── Step 1: User request ─────────────────────────────────────────────
   emit(res, { type: 'step-start', step: 'user-request', timestamp: now(), data: { concept } });
@@ -157,11 +157,11 @@ async function runImageGenPipeline(
         iteration,
       };
     } else {
-      const dalleClient = getDalleClient();
-      const deployment = getDalleDeployment();
+      const imageClient = getImageClient();
+      const deployment = getImageDeployment();
       const genStart = Date.now();
 
-      const imgResponse = await dalleClient.images.generate({
+      const imgResponse = await imageClient.images.generate({
         model: deployment,
         prompt: promptOutput.refinedPrompt,
         n: 1,
