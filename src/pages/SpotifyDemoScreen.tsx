@@ -144,7 +144,7 @@ const SpotifyDemoScreen: React.FC = () => {
           if (event.step === 'reasoning' && event.data && 'tools' in event.data) {
             setTools(event.data.tools);
             if ('model' in event.data && event.data.model) {
-              setModelName(event.data.model as string);
+              setModelName(event.data.model);
             }
           }
         }
