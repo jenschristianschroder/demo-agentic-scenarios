@@ -130,6 +130,10 @@ export async function searchTracks(
 }
 
 // ─── Tool: get_recommendations ───────────────────────────────────────────────
+// NOTE: The GET /recommendations endpoint was removed from the Spotify Web API
+// for Development Mode apps in the February 2026 migration. This implementation
+// is kept for extended-quota apps. It is not registered in executeSpotifyTool
+// or the agent's tool list for dev mode compatibility.
 
 export async function getRecommendations(
   token: string,
@@ -226,14 +230,9 @@ export async function createPlaylist(
   token: string,
   args: { name: string; description?: string; public?: boolean }
 ): Promise<unknown> {
-  // Always resolve the authenticated user's ID from /me so we never rely on
-  // the LLM passing the correct value.  The Spotify API only allows creating
-  // playlists for the currently authenticated user, so using /me is the
-  // safest approach and avoids 403 errors caused by an incorrect user_id.
-  const me = (await spotifyFetch(token, '/me')) as Record<string, unknown>;
-  const userId = me.id as string;
-
-  const data = (await spotifyFetch(token, `/users/${encodeURIComponent(userId)}/playlists`, {
+  // POST /me/playlists — the only supported create-playlist endpoint since the
+  // February 2026 Spotify API migration removed POST /users/{id}/playlists.
+  const data = (await spotifyFetch(token, '/me/playlists', {
     method: 'POST',
     body: JSON.stringify({
       name: args.name,
@@ -297,8 +296,6 @@ export async function executeSpotifyTool(
         return await getCurrentUser(token);
       case 'search_tracks':
         return await searchTracks(token, args as Parameters<typeof searchTracks>[1]);
-      case 'get_recommendations':
-        return await getRecommendations(token, args as Parameters<typeof getRecommendations>[1]);
       case 'get_user_playlists':
         return await getUserPlaylists(token, args as Parameters<typeof getUserPlaylists>[1]);
       case 'get_playlist':

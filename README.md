@@ -169,3 +169,20 @@ Steps to add a user:
 
 To remove the user limit, submit your app for a [Quota Extension](https://developer.spotify.com/documentation/web-api/concepts/quota-modes) via the Developer Dashboard.
 
+### February 2026 Spotify API Changes
+
+Spotify's [February 2026 Web API migration](https://developer.spotify.com/documentation/web-api/tutorials/february-2026-migration-guide) introduced breaking changes that this app has been updated for:
+
+| Change | Impact | Status |
+|--------|--------|--------|
+| `POST /users/{id}/playlists` removed | Playlist creation now uses `POST /me/playlists` | ✅ Migrated |
+| `GET /recommendations` removed (Dev Mode) | Recommendations endpoint is no longer available for Development Mode apps | ✅ Removed from agent tools |
+| `GET /playlists/{id}/items` (was `/tracks`) | Playlist track management uses `/items` | ✅ No migration needed |
+| Premium subscription required | The app owner must have Spotify Premium for Development Mode to work | ℹ️ Requirement |
+| 5-user limit per app | Development Mode apps are limited to 5 test users | ℹ️ Requirement |
+
+**Impact on the demo:**
+- Playlist creation (`create_playlist` tool) now calls `POST /me/playlists` directly — no user ID lookup is needed.
+- The `get_recommendations` tool has been removed from the agent. Track discovery is handled entirely via `search_tracks` using multiple queries.
+- If your app requires the recommendations endpoint, apply for [Extended Quota](https://developer.spotify.com/documentation/web-api/concepts/quota-modes).
+

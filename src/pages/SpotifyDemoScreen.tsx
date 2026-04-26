@@ -260,7 +260,7 @@ const SpotifyDemoScreen: React.FC = () => {
                 fontSize: '0.9em',
               }}
             >
-              Disconnect &amp; Reconnect
+              Disconnect & Reconnect
             </button>
           </div>
         )}
