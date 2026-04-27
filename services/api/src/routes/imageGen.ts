@@ -164,7 +164,7 @@ async function runImageGenPipeline(
       });
 
       const generationDurationMs = Date.now() - genStart;
-      const imageData = result.data[0];
+      const imageData = result.data?.[0];
 
       if (!imageData?.b64_json) {
         throw new Error('gpt-image-2 edit returned no image data');
@@ -189,7 +189,7 @@ async function runImageGenPipeline(
       });
 
       let finalB64 = '';
-      let revisedPrompt = promptOutput.refinedPrompt;
+      const revisedPrompt = promptOutput.refinedPrompt;
 
       for await (const event of stream) {
         if (event.type === 'image_generation.partial_image') {
