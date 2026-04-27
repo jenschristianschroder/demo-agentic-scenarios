@@ -27,10 +27,29 @@ const VALID_SIZES: ImageSize[] = ['1024x1024', '1536x1024', '1024x1536', 'auto']
 const VALID_QUALITIES: ImageQuality[] = ['low', 'medium', 'high', 'auto'];
 const MAX_REVISIONS = 3;
 const IMAGE_GEN_TIMEOUT_MS = 600_000; // 10 minutes — gpt-image-2 can take 60-180s per generation; with prompt engineer, art director, and up to 3 revision iterations the pipeline needs generous headroom
+const KEEPALIVE_INTERVAL_MS = 15_000; // Send SSE keepalive comment every 15 seconds during long-running steps
 
 function emit(res: Response, event: ImageGenEvent): void {
   if (res.writableEnded) return;
   res.write(`data: ${JSON.stringify(event)}\n\n`);
+}
+
+/**
+ * Start a periodic SSE keepalive comment to prevent proxies (Vite dev server,
+ * nginx, Azure Container Apps ingress, etc.) from dropping idle connections
+ * during long-running API calls like gpt-image-2 generation.
+ * Returns a cleanup function that stops the heartbeat.
+ */
+function startKeepalive(res: Response): () => void {
+  const id = setInterval(() => {
+    if (res.writableEnded) {
+      clearInterval(id);
+      return;
+    }
+    // SSE comment — ignored by EventSource clients but keeps the connection alive
+    res.write(': keepalive\n\n');
+  }, KEEPALIVE_INTERVAL_MS);
+  return () => clearInterval(id);
 }
 
 function now(): string {
@@ -181,14 +200,20 @@ async function runImageGenPipeline(
     emit(res, { type: 'step-start', step: 'prompt-engineer', timestamp: now(), data: null });
     console.log(`[ImageGen] Prompt engineer — iteration ${iteration}`);
 
-    const promptOutput: PromptEngineerOutput = await engineerPrompt(
-      concept,
-      style,
-      creativityLevel,
-      revisionInstructions,
-      iteration,
-      !!referenceImageBase64
-    );
+    const stopPromptKeepalive = startKeepalive(res);
+    let promptOutput: PromptEngineerOutput;
+    try {
+      promptOutput = await engineerPrompt(
+        concept,
+        style,
+        creativityLevel,
+        revisionInstructions,
+        iteration,
+        !!referenceImageBase64
+      );
+    } finally {
+      stopPromptKeepalive();
+    }
 
     emit(res, { type: 'step-complete', step: 'prompt-engineer', timestamp: now(), data: promptOutput });
 
@@ -197,12 +222,18 @@ async function runImageGenPipeline(
     // ── Step 3: Image Generation ───────────────────────────────────────
     emit(res, { type: 'step-start', step: 'image-generation', timestamp: now(), data: null });
 
+    // Start keepalive heartbeat — gpt-image-2 calls can take 60-180s+ and the
+    // SSE connection would otherwise go idle, causing proxies (Vite dev server,
+    // nginx, Azure Container Apps ingress) to drop the connection.
+    const stopKeepalive = startKeepalive(res);
+
     const imageClient = getImageClient();
     const deployment = getImageDeployment();
     const genStart = Date.now();
 
     let imageOutput: ImageGenerationOutput;
 
+    try {
     console.log(`[ImageGen] Calling gpt-image-2 (iteration ${iteration}, reference: ${!!referenceImageBase64})`);
 
     if (referenceImageBase64) {
@@ -322,6 +353,9 @@ async function runImageGenPipeline(
         iteration,
       };
     }
+    } finally {
+      stopKeepalive();
+    }
 
     emit(res, { type: 'step-complete', step: 'image-generation', timestamp: now(), data: imageOutput });
 
@@ -335,15 +369,21 @@ async function runImageGenPipeline(
     console.log(`[ImageGen] Art director review — iteration ${iteration}`);
     emit(res, { type: 'step-start', step: 'art-director', timestamp: now(), data: null });
 
-    const artOutput: ArtDirectorOutput = await reviewImage(
-      concept,
-      style,
-      promptOutput.refinedPrompt,
-      imageOutput.revisedPrompt,
-      iteration,
-      lastImageUrl,
-      referenceImageBase64
-    );
+    const stopArtKeepalive = startKeepalive(res);
+    let artOutput: ArtDirectorOutput;
+    try {
+      artOutput = await reviewImage(
+        concept,
+        style,
+        promptOutput.refinedPrompt,
+        imageOutput.revisedPrompt,
+        iteration,
+        lastImageUrl,
+        referenceImageBase64
+      );
+    } finally {
+      stopArtKeepalive();
+    }
 
     emit(res, { type: 'step-complete', step: 'art-director', timestamp: now(), data: artOutput });
     console.log(`[ImageGen] Art director verdict: ${artOutput.verdict} (score: ${artOutput.score})`);
