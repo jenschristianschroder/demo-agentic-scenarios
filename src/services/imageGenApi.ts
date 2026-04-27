@@ -65,7 +65,7 @@ export async function runImageGen(
           console.debug(`[ImageGen:SSE] Event #${eventCount}:`, event.type, event.step, event.timestamp);
           onEvent(event);
         } catch {
-          console.warn('[ImageGen:SSE] Skipping malformed SSE line:', trimmed.slice(0, 100));
+          console.warn('[ImageGen:SSE] Skipping malformed SSE line (length:', trimmed.length, ')');
         }
       }
     }
