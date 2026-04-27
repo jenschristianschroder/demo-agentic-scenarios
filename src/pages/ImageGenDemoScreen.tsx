@@ -19,6 +19,9 @@ import './ImageGenDemoScreen.css';
 
 const STYLES = ['Photorealistic', 'Illustration', 'Digital Art', 'Oil Painting', 'Watercolor', 'Cinematic'];
 
+const MAX_REFERENCE_SIZE_MB = 10;
+const MAX_REFERENCE_SIZE_BYTES = MAX_REFERENCE_SIZE_MB * 1024 * 1024;
+
 const SIZE_OPTIONS: { label: string; value: ImageSize }[] = [
   { label: 'Square', value: '1024x1024' },
   { label: 'Landscape', value: '1536x1024' },
@@ -252,8 +255,8 @@ const ImageGenDemoScreen: React.FC = () => {
       return;
     }
 
-    if (file.size > 10 * 1024 * 1024) {
-      setError('Image must be smaller than 10 MB');
+    if (file.size > MAX_REFERENCE_SIZE_BYTES) {
+      setError(`Image must be smaller than ${MAX_REFERENCE_SIZE_MB} MB`);
       return;
     }
 
@@ -404,7 +407,7 @@ const ImageGenDemoScreen: React.FC = () => {
                     <line x1="12" y1="3" x2="12" y2="15" />
                   </svg>
                   <span>Upload a reference image</span>
-                  <span className="ig-upload-formats">PNG, JPEG, or WebP — max 10 MB</span>
+                  <span className="ig-upload-formats">PNG, JPEG, or WebP — max {MAX_REFERENCE_SIZE_MB} MB</span>
                 </label>
               )}
               <input

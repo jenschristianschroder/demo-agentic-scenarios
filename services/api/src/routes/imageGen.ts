@@ -37,10 +37,29 @@ function now(): string {
 
 /**
  * Convert a base64 data URL or raw base64 string to a Buffer.
+ * Validates the input and throws a descriptive error on failure.
  */
 function base64ToBuffer(base64: string): Buffer {
   const raw = base64.includes(',') ? base64.split(',')[1] : base64;
-  return Buffer.from(raw, 'base64');
+  const buf = Buffer.from(raw, 'base64');
+  if (buf.length === 0) {
+    throw new Error('Invalid reference image: decoded buffer is empty');
+  }
+  return buf;
+}
+
+/**
+ * Extract the MIME type from a base64 data URL (e.g. 'data:image/jpeg;base64,...').
+ * Falls back to 'image/png' if the prefix is missing or unrecognised.
+ */
+function extractMimeType(dataUrl: string): { mime: string; ext: string } {
+  const match = dataUrl.match(/^data:(image\/\w+);base64,/);
+  if (match) {
+    const mime = match[1];
+    const ext = mime === 'image/jpeg' ? 'jpg' : mime.replace('image/', '');
+    return { mime, ext };
+  }
+  return { mime: 'image/png', ext: 'png' };
 }
 
 /**
@@ -152,7 +171,8 @@ async function runImageGenPipeline(
     if (referenceImageBase64) {
       // Use images.edit when a reference image is provided
       const imageBuffer = base64ToBuffer(referenceImageBase64);
-      const imageFile = await toFile(imageBuffer, 'reference.png', { type: 'image/png' });
+      const { mime, ext } = extractMimeType(referenceImageBase64);
+      const imageFile = await toFile(imageBuffer, `reference.${ext}`, { type: mime });
 
       const result = await imageClient.images.edit({
         model: deployment,
