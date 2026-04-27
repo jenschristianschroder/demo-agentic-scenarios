@@ -280,6 +280,17 @@ const ImageGenDemoScreen: React.FC = () => {
   const handleRun = useCallback(async () => {
     if (!concept.trim() || isRunning) return;
 
+    console.debug('[ImageGen:UI] Starting pipeline', {
+      concept: concept.trim().slice(0, 80),
+      style,
+      size,
+      quality,
+      artDirectorEnabled,
+      maxRevisions,
+      creativityLevel,
+      hasReferenceImage: !!referenceImage,
+    });
+
     setIsRunning(true);
     setActiveStep(null);
     setCompletedSteps(new Set());
@@ -304,6 +315,7 @@ const ImageGenDemoScreen: React.FC = () => {
     try {
       await runImageGen(request, (event: ImageGenEvent) => {
         if (event.type === 'step-start') {
+          console.debug('[ImageGen:UI] Step started:', event.step);
           setActiveStep(event.step);
           if (event.step === 'image-generation') {
             setPartialImageUrl(null);
@@ -313,19 +325,25 @@ const ImageGenDemoScreen: React.FC = () => {
 
         if (event.type === 'image-progress') {
           const progress = event.data as ImageProgressData;
+          console.debug('[ImageGen:UI] Image progress — partial image', progress.partialImageIndex);
           setPartialImageUrl(progress.partialImageUrl);
           return;
         }
 
         if (event.type === 'step-complete') {
+          console.debug('[ImageGen:UI] Step completed:', event.step);
           setCompletedSteps((prev) => new Set(prev).add(event.step));
 
           if (event.step === 'prompt-engineer') {
             setPromptOutputs((prev) => [...prev, event.data as PromptEngineerOutput]);
           } else if (event.step === 'image-generation') {
-            setImageOutputs((prev) => [...prev, event.data as ImageGenerationOutput]);
+            const imgOut = event.data as ImageGenerationOutput;
+            console.debug('[ImageGen:UI] Image generated in', imgOut.generationDurationMs, 'ms');
+            setImageOutputs((prev) => [...prev, imgOut]);
           } else if (event.step === 'art-director') {
-            setArtDirectorOutputs((prev) => [...prev, event.data as ArtDirectorOutput]);
+            const adOut = event.data as ArtDirectorOutput;
+            console.debug('[ImageGen:UI] Art director verdict:', adOut.verdict, 'score:', adOut.score);
+            setArtDirectorOutputs((prev) => [...prev, adOut]);
           } else if (event.step === 'final-image') {
             setSummary(event.data as ImageGenSummary);
           }
@@ -333,6 +351,7 @@ const ImageGenDemoScreen: React.FC = () => {
         }
 
         if (event.type === 'run-complete') {
+          console.debug('[ImageGen:UI] Pipeline complete');
           setSummary(event.data as ImageGenSummary);
           setActiveStep('final-image');
           setIsRunning(false);
@@ -341,11 +360,13 @@ const ImageGenDemoScreen: React.FC = () => {
 
         if (event.type === 'error') {
           const err = event.data as { message: string };
+          console.error('[ImageGen:UI] Pipeline error:', err.message);
           setError(err.message);
           setIsRunning(false);
         }
       });
     } catch (err) {
+      console.error('[ImageGen:UI] Unhandled error:', err);
       setError(err instanceof Error ? err.message : 'Image generation failed');
     } finally {
       setIsRunning(false);
