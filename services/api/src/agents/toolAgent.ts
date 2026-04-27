@@ -94,11 +94,14 @@ const TOOLS: ChatCompletionTool[] = [
 ];
 
 /** Tool definitions for the UI (without the JSON Schema details) */
-export const TOOL_DEFINITIONS: ToolDefinition[] = TOOLS.map((t) => ({
-  name: t.function.name,
-  description: t.function.description ?? '',
-  parameters: t.function.parameters as Record<string, unknown>,
-}));
+export const TOOL_DEFINITIONS: ToolDefinition[] = TOOLS.map((t) => {
+  if (!('function' in t)) throw new Error('Expected function tool');
+  return {
+    name: t.function.name,
+    description: t.function.description ?? '',
+    parameters: t.function.parameters as Record<string, unknown>,
+  };
+});
 
 const SYSTEM_PROMPT = `You are a helpful Contoso Electronics product assistant. You have access to tools that let you search a knowledge base, look up product details, compare products, calculate prices in different currencies, and check warranty status.
 
@@ -167,6 +170,7 @@ export async function runToolAgent(
 
     // Process each tool call
     for (const tc of assistantMessage.tool_calls) {
+      if (!('function' in tc)) continue;
       callCounter++;
       const toolName = tc.function.name;
       const toolArgs = JSON.parse(tc.function.arguments);
