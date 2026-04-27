@@ -38,6 +38,9 @@ export async function runImageGen(
   const decoder = new TextDecoder();
   let buffer = '';
   let eventCount = 0;
+  let receivedDone = false;
+  let receivedRunComplete = false;
+  let receivedError = false;
 
   while (true) {
     const { done, value } = await reader.read();
@@ -57,17 +60,33 @@ export async function runImageGen(
         const json = trimmed.slice(6);
         if (json === '[DONE]') {
           console.debug('[ImageGen:SSE] Received [DONE] signal, total events:', eventCount);
+          receivedDone = true;
           return;
         }
         try {
           const event: ImageGenEvent = JSON.parse(json);
           eventCount++;
           console.debug(`[ImageGen:SSE] Event #${eventCount}:`, event.type, event.step, event.timestamp);
+          if (event.type === 'run-complete') receivedRunComplete = true;
+          if (event.type === 'error') receivedError = true;
           onEvent(event);
         } catch {
           console.warn('[ImageGen:SSE] Skipping malformed SSE line (length:', trimmed.length, ')');
         }
       }
     }
+  }
+
+  // Stream ended without [DONE] signal — detect premature termination.
+  // A well-formed pipeline always sends either a run-complete event, an error
+  // event, or a [DONE] sentinel. If none were received the connection was lost.
+  if (!receivedDone && !receivedRunComplete && !receivedError) {
+    console.error('[ImageGen:SSE] Stream ended prematurely without completion or error signal');
+    onEvent({
+      type: 'error',
+      step: 'image-generation',
+      timestamp: new Date().toISOString(),
+      data: { message: 'Connection to server lost — the image generation pipeline was interrupted. Please try again.' },
+    });
   }
 }
