@@ -196,7 +196,7 @@ export const SPOTIFY_TOOL_DEFINITIONS: ToolDefinition[] = TOOLS.map((t) => {
 const RESPONSE_TOOLS: FunctionTool[] = TOOLS.map((t) => {
   if (!('function' in t)) throw new Error('Expected function tool');
   return {
-    type: 'function' as const,
+    type: 'function',
     name: t.function.name,
     description: t.function.description ?? null,
     parameters: (t.function.parameters as Record<string, unknown>) ?? null,
