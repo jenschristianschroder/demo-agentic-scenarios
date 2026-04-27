@@ -235,43 +235,76 @@ async function runImageGenPipeline(
         iteration,
       };
     } else {
-      // Use images.generate for text-only generation (with streaming)
-      console.log('[ImageGen] Starting streaming generation...');
-      const stream = await imageClient.images.generate({
-        model: deployment,
-        prompt: promptOutput.refinedPrompt,
-        n: 1,
-        size,
-        quality,
-        stream: true,
-        partial_images: 3,
-      }, { signal });
-
-      console.log('[ImageGen] Stream started, awaiting events...');
+      // Use images.generate for text-only generation
+      // Try streaming first, fall back to non-streaming if it fails
       let finalB64 = '';
       const revisedPrompt = promptOutput.refinedPrompt;
 
-      for await (const event of stream) {
-        if (signal.aborted) break;
-        if (event.type === 'image_generation.partial_image') {
-          console.log(`[ImageGen] Partial image ${event.partial_image_index} received`);
-          const progressData: ImageProgressData = {
-            partialImageUrl: `data:image/png;base64,${event.b64_json}`,
-            partialImageIndex: event.partial_image_index,
-            iteration,
-          };
-          emit(res, {
-            type: 'image-progress',
-            step: 'image-generation',
-            timestamp: now(),
-            data: progressData,
-          });
-        } else if (event.type === 'image_generation.completed') {
-          console.log('[ImageGen] Final image received');
-          finalB64 = event.b64_json;
-        } else {
-          console.log(`[ImageGen] Unknown stream event type: ${(event as { type: string }).type}`);
+      try {
+        console.log('[ImageGen] Starting streaming generation...');
+        const stream = await imageClient.images.generate({
+          model: deployment,
+          prompt: promptOutput.refinedPrompt,
+          n: 1,
+          size,
+          quality,
+          stream: true,
+          partial_images: 3,
+        }, { signal });
+
+        console.log('[ImageGen] Stream started, awaiting events...');
+
+        for await (const event of stream) {
+          if (signal.aborted) break;
+          if (event.type === 'image_generation.partial_image') {
+            console.log(`[ImageGen] Partial image ${event.partial_image_index} received`);
+            const progressData: ImageProgressData = {
+              partialImageUrl: `data:image/png;base64,${event.b64_json}`,
+              partialImageIndex: event.partial_image_index,
+              iteration,
+            };
+            emit(res, {
+              type: 'image-progress',
+              step: 'image-generation',
+              timestamp: now(),
+              data: progressData,
+            });
+          } else if (event.type === 'image_generation.completed') {
+            console.log('[ImageGen] Final image received from stream');
+            finalB64 = event.b64_json;
+          } else {
+            console.log(`[ImageGen] Unknown stream event type: ${(event as { type: string }).type}`);
+          }
         }
+
+        if (!finalB64 && !signal.aborted) {
+          console.warn('[ImageGen] Streaming completed but no final image received, falling back to non-streaming');
+          throw new Error('streaming_fallback');
+        }
+      } catch (streamErr) {
+        // Fall back to non-streaming generation
+        if (signal.aborted) throw new Error('Pipeline aborted');
+
+        const errMsg = streamErr instanceof Error ? streamErr.message : String(streamErr);
+        if (errMsg !== 'streaming_fallback') {
+          console.warn('[ImageGen] Streaming generation failed, falling back to non-streaming:', errMsg);
+        }
+
+        console.log('[ImageGen] Using non-streaming generation...');
+        const result = await imageClient.images.generate({
+          model: deployment,
+          prompt: promptOutput.refinedPrompt,
+          n: 1,
+          size,
+          quality,
+        }, { signal });
+
+        const imageData = result.data?.[0];
+        if (!imageData?.b64_json) {
+          throw new Error('gpt-image-2 returned no image data');
+        }
+        finalB64 = imageData.b64_json;
+        console.log('[ImageGen] Non-streaming generation completed successfully');
       }
 
       const generationDurationMs = Date.now() - genStart;
