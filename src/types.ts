@@ -667,4 +667,5 @@ export interface ImageGenRequest {
   artDirectorEnabled: boolean;
   maxRevisions: number;
   creativityLevel: number;
+  referenceImageBase64?: string;
 }

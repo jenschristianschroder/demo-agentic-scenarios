@@ -13,6 +13,7 @@ Guidelines:
 - Include lighting, atmosphere, colour palette, and compositional details.
 - Avoid prohibited content (violence, nudity, real people by name, copyrighted characters).
 - If revision instructions are provided, incorporate them precisely.
+- If a reference image has been provided by the user, acknowledge it in your style and composition notes, and craft the prompt so gpt-image-2 will incorporate or draw inspiration from the reference image as described by the user.
 
 Respond with valid JSON matching the provided schema.`;
 
@@ -21,13 +22,22 @@ export async function engineerPrompt(
   style: string,
   creativityLevel: number,
   revisionInstructions?: string,
-  iteration: number = 1
+  iteration: number = 1,
+  hasReferenceImage: boolean = false
 ): Promise<PromptEngineerOutput> {
   const client = getOpenAIClient();
 
-  const userMessage = revisionInstructions
-    ? `Concept: ${concept}\nStyle: ${style}\n\nRevision instructions from art director:\n${revisionInstructions}\n\nPlease revise the prompt accordingly.`
-    : `Concept: ${concept}\nStyle: ${style}`;
+  let userMessage: string;
+
+  if (revisionInstructions) {
+    userMessage = `Concept: ${concept}\nStyle: ${style}\n\nRevision instructions from art director:\n${revisionInstructions}\n\nPlease revise the prompt accordingly.`;
+  } else {
+    userMessage = `Concept: ${concept}\nStyle: ${style}`;
+  }
+
+  if (hasReferenceImage) {
+    userMessage += `\n\nNote: The user has provided a reference image. The image will be passed directly to gpt-image-2 as input. Craft your prompt so it instructs the model to use the reference image as inspiration or incorporate elements from it, as described in the concept.`;
+  }
 
   const response = await client.chat.completions.create({
     model: process.env.AZURE_OPENAI_DEPLOYMENT || 'gpt-4o',
@@ -60,23 +70,4 @@ export async function engineerPrompt(
 
   const parsed = JSON.parse(content) as Omit<PromptEngineerOutput, 'iteration'>;
   return { ...parsed, iteration };
-}
-
-/** Mock output for local development without Azure credentials */
-export function mockEngineerPrompt(
-  concept: string,
-  style: string,
-  revisionInstructions?: string,
-  iteration: number = 1
-): PromptEngineerOutput {
-  const base = revisionInstructions
-    ? `${concept}, revised: ${revisionInstructions}, ${style} style, highly detailed, professional photography, dramatic lighting, cinematic composition, 8K resolution`
-    : `${concept}, ${style} style, highly detailed, professional photography, dramatic lighting, cinematic composition, 8K resolution`;
-
-  return {
-    refinedPrompt: base,
-    styleNotes: `Rendered in ${style} style with careful attention to lighting and texture.`,
-    compositionNotes: 'Rule of thirds composition, foreground interest, strong depth of field.',
-    iteration,
-  };
 }
