@@ -14,6 +14,7 @@ import type {
   ImageGenSummary,
   ImageSize,
   ImageQuality,
+  ImageProgressData,
 } from '../types.js';
 import { getImageClient, getImageDeployment, isImageConfigured } from '../azureClients.js';
 import { engineerPrompt, mockEngineerPrompt } from '../agents/promptEngineerAgent.js';
@@ -21,7 +22,7 @@ import { reviewImage, mockReviewImage } from '../agents/artDirectorAgent.js';
 
 export const imageGenRouter = Router();
 
-const VALID_SIZES: ImageSize[] = ['1024x1024', '1792x1024', '1024x1792'];
+const VALID_SIZES: ImageSize[] = ['1024x1024', '1536x1024', '1024x1536', 'auto'];
 const VALID_QUALITIES: ImageQuality[] = ['low', 'medium', 'high', 'auto'];
 const MAX_REVISIONS = 3;
 
@@ -161,28 +162,48 @@ async function runImageGenPipeline(
       const deployment = getImageDeployment();
       const genStart = Date.now();
 
-      const imgResponse = await imageClient.images.generate({
+      const stream = await imageClient.images.generate({
         model: deployment,
         prompt: promptOutput.refinedPrompt,
         n: 1,
         size,
         quality,
+        stream: true,
+        partial_images: 3,
       });
 
+      let finalB64 = '';
+      let revisedPrompt = promptOutput.refinedPrompt;
+
+      for await (const event of stream) {
+        if (event.type === 'image_generation.partial_image') {
+          const progressData: ImageProgressData = {
+            partialImageUrl: `data:image/png;base64,${event.b64_json}`,
+            partialImageIndex: event.partial_image_index,
+            iteration,
+          };
+          emit(res, {
+            type: 'image-progress',
+            step: 'image-generation',
+            timestamp: now(),
+            data: progressData,
+          });
+        } else if (event.type === 'image_generation.completed') {
+          finalB64 = event.b64_json;
+        }
+      }
+
       const generationDurationMs = Date.now() - genStart;
-      const imageData = imgResponse.data?.[0];
-      let imageUrl: string;
-      if (imageData?.url) {
-        imageUrl = imageData.url;
-      } else if (imageData?.b64_json) {
-        imageUrl = `data:image/png;base64,${imageData.b64_json}`;
-      } else {
+
+      if (!finalB64) {
         throw new Error('gpt-image-2 returned no image data');
       }
 
+      const imageUrl = `data:image/png;base64,${finalB64}`;
+
       imageOutput = {
         imageUrl,
-        revisedPrompt: imageData.revised_prompt ?? promptOutput.refinedPrompt,
+        revisedPrompt,
         generationDurationMs,
         iteration,
       };

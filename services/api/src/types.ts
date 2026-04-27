@@ -427,7 +427,7 @@ export type ImageGenStep =
   | 'art-director'
   | 'final-image';
 
-export type ImageSize = '1024x1024' | '1792x1024' | '1024x1792';
+export type ImageSize = '1024x1024' | '1536x1024' | '1024x1536' | 'auto';
 export type ImageQuality = 'low' | 'medium' | 'high' | 'auto';
 
 export interface PromptEngineerOutput {
@@ -441,6 +441,12 @@ export interface ImageGenerationOutput {
   imageUrl: string;
   revisedPrompt: string;
   generationDurationMs: number;
+  iteration: number;
+}
+
+export interface ImageProgressData {
+  partialImageUrl: string;
+  partialImageIndex: number;
   iteration: number;
 }
 
@@ -461,12 +467,13 @@ export interface ImageGenSummary {
 }
 
 export interface ImageGenEvent {
-  type: 'step-start' | 'step-complete' | 'run-complete' | 'error';
+  type: 'step-start' | 'step-complete' | 'image-progress' | 'run-complete' | 'error';
   step: ImageGenStep;
   timestamp: string;
   data:
     | PromptEngineerOutput
     | ImageGenerationOutput
+    | ImageProgressData
     | ArtDirectorOutput
     | ImageGenSummary
     | { concept: string }
