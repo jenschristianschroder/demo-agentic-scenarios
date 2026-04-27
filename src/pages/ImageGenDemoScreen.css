@@ -501,6 +501,74 @@
   color: #c62828;
 }
 
+.ig-error-rate-limit {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: #fff8e1;
+  border-color: #f9a825;
+  color: #6d4c00;
+}
+
+.ig-error-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.ig-error-icon {
+  flex-shrink: 0;
+  color: #f9a825;
+}
+
+.ig-retry-btn {
+  flex-shrink: 0;
+  padding: 6px 16px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #ffffff;
+  background: #f9a825;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.ig-retry-btn:hover {
+  background: #f57f17;
+}
+
+.ig-retry-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ─── Step error state ─────────────────────────────────────── */
+
+.ig-step-error {
+  border-color: #c62828;
+  background: #ffebee;
+}
+
+.ig-step-error .ig-step-icon { color: #c62828; }
+.ig-step-error .ig-step-label { color: #c62828; }
+
+.ig-step-error-badge {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  background: #c62828;
+  color: white;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 /* ─── Responsive ────────────────────────────────────────────── */
 
 @media (max-width: 700px) {

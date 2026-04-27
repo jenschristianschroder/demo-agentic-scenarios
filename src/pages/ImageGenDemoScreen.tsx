@@ -91,10 +91,11 @@ const StepIcon: React.FC<{ step: ImageGenStep }> = ({ step }) => {
 interface PipelineViewProps {
   completedSteps: Set<ImageGenStep>;
   activeStep: ImageGenStep | null;
+  errorStep: ImageGenStep | null;
   artDirectorEnabled: boolean;
 }
 
-const PipelineView: React.FC<PipelineViewProps> = ({ completedSteps, activeStep, artDirectorEnabled }) => {
+const PipelineView: React.FC<PipelineViewProps> = ({ completedSteps, activeStep, errorStep, artDirectorEnabled }) => {
   const visibleSteps = artDirectorEnabled
     ? PIPELINE_STEPS
     : PIPELINE_STEPS.filter((s) => s !== 'art-director');
@@ -106,6 +107,7 @@ const PipelineView: React.FC<PipelineViewProps> = ({ completedSteps, activeStep,
         {visibleSteps.map((step, idx) => {
           const completed = completedSteps.has(step);
           const isActive = activeStep === step;
+          const isError = errorStep === step;
           return (
             <React.Fragment key={step}>
               {idx > 0 && (
@@ -118,13 +120,22 @@ const PipelineView: React.FC<PipelineViewProps> = ({ completedSteps, activeStep,
               <div
                 className={[
                   'ig-step',
-                  isActive && !completed ? 'ig-step-active' : '',
+                  isError ? 'ig-step-error' : '',
+                  isActive && !completed && !isError ? 'ig-step-active' : '',
                   completed ? 'ig-step-completed' : '',
                 ].join(' ')}
               >
                 <span className="ig-step-icon">
                   <StepIcon step={step} />
-                  {isActive && !completed && <span className="ig-step-spinner" />}
+                  {isActive && !completed && !isError && <span className="ig-step-spinner" />}
+                  {isError && (
+                    <span className="ig-step-error-badge">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                      </svg>
+                    </span>
+                  )}
                   {completed && (
                     <span className="ig-step-check">
                       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
@@ -240,6 +251,8 @@ const ImageGenDemoScreen: React.FC = () => {
   const [summary, setSummary] = useState<ImageGenSummary | null>(null);
   const [partialImageUrl, setPartialImageUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [errorStep, setErrorStep] = useState<ImageGenStep | null>(null);
+  const [isRateLimited, setIsRateLimited] = useState(false);
 
   const handlePreset = useCallback((idx: number) => {
     setPresetIdx(idx);
@@ -300,6 +313,8 @@ const ImageGenDemoScreen: React.FC = () => {
     setSummary(null);
     setPartialImageUrl(null);
     setError(null);
+    setErrorStep(null);
+    setIsRateLimited(false);
 
     const request: ImageGenRequest = {
       concept: concept.trim(),
@@ -361,7 +376,14 @@ const ImageGenDemoScreen: React.FC = () => {
         if (event.type === 'error') {
           const err = event.data as { message: string };
           console.error('[ImageGen:UI] Pipeline error:', err.message);
-          setError(err.message);
+          const is429 = /\b429\b/.test(err.message) || /rate.?limit/i.test(err.message) || /too many requests/i.test(err.message);
+          setErrorStep(event.step);
+          setIsRateLimited(is429);
+          setError(
+            is429
+              ? 'The image generation service is temporarily overloaded. Please wait a moment and try again.'
+              : err.message
+          );
           setIsRunning(false);
         }
       });
@@ -614,6 +636,7 @@ const ImageGenDemoScreen: React.FC = () => {
           <PipelineView
             completedSteps={completedSteps}
             activeStep={activeStep}
+            errorStep={errorStep}
             artDirectorEnabled={artDirectorEnabled}
           />
         )}
@@ -639,7 +662,24 @@ const ImageGenDemoScreen: React.FC = () => {
         )}
 
         {/* ── Error ─────────────────────────────────────────── */}
-        {error && <div className="ig-error">{error}</div>}
+        {error && (
+          <div className={isRateLimited ? 'ig-error ig-error-rate-limit' : 'ig-error'}>
+            <div className="ig-error-content">
+              {isRateLimited && (
+                <svg className="ig-error-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12 6 12 12 16 14" />
+                </svg>
+              )}
+              <span>{error}</span>
+            </div>
+            {isRateLimited && (
+              <button type="button" className="ig-retry-btn" onClick={handleRun} disabled={isRunning} aria-label="Retry image generation">
+                Retry
+              </button>
+            )}
+          </div>
+        )}
 
         {/* ── Final Image ───────────────────────────────────── */}
         {summary && (
