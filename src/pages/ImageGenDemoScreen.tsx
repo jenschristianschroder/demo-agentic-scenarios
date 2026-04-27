@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import type {
   ImageGenRequest,
   ImageGenEvent,
@@ -223,6 +223,9 @@ const ImageGenDemoScreen: React.FC = () => {
   const [maxRevisions, setMaxRevisions] = useState(2);
   const [creativityLevel, setCreativityLevel] = useState(0.7);
   const [presetIdx, setPresetIdx] = useState(0);
+  const [referenceImage, setReferenceImage] = useState<string | null>(null);
+  const [referenceImageName, setReferenceImageName] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ─── Orchestration state ──────────────────────────────────────────────────
   const [isRunning, setIsRunning] = useState(false);
@@ -238,6 +241,37 @@ const ImageGenDemoScreen: React.FC = () => {
   const handlePreset = useCallback((idx: number) => {
     setPresetIdx(idx);
     setConcept(PRESET_CONCEPTS[idx].prompt);
+  }, []);
+
+  const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setError('Please upload an image file (PNG, JPEG, WebP, etc.)');
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      setError('Image must be smaller than 10 MB');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setReferenceImage(reader.result as string);
+      setReferenceImageName(file.name);
+      setError(null);
+    };
+    reader.readAsDataURL(file);
+  }, []);
+
+  const handleRemoveReference = useCallback(() => {
+    setReferenceImage(null);
+    setReferenceImageName(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   }, []);
 
   const handleRun = useCallback(async () => {
@@ -261,6 +295,7 @@ const ImageGenDemoScreen: React.FC = () => {
       artDirectorEnabled,
       maxRevisions,
       creativityLevel,
+      referenceImageBase64: referenceImage || undefined,
     };
 
     try {
@@ -312,9 +347,7 @@ const ImageGenDemoScreen: React.FC = () => {
     } finally {
       setIsRunning(false);
     }
-  }, [concept, style, size, quality, artDirectorEnabled, maxRevisions, creativityLevel, isRunning]);
-
-  const isMockImage = summary?.finalImageUrl.startsWith('data:image/svg+xml');
+  }, [concept, style, size, quality, artDirectorEnabled, maxRevisions, creativityLevel, isRunning, referenceImage]);
 
   return (
     <div className="ig-screen">
@@ -337,6 +370,53 @@ const ImageGenDemoScreen: React.FC = () => {
               disabled={isRunning}
               rows={3}
             />
+          </div>
+
+          {/* Reference Image Upload */}
+          <div className="control-group">
+            <label className="control-label">Reference Image (optional)</label>
+            <div className="ig-upload-area">
+              {referenceImage ? (
+                <div className="ig-upload-preview">
+                  <img src={referenceImage} alt="Reference" className="ig-upload-thumb" />
+                  <div className="ig-upload-info">
+                    <span className="ig-upload-filename">{referenceImageName}</span>
+                    <span className="ig-upload-hint">This image will be used as reference for the generation</span>
+                  </div>
+                  <button
+                    type="button"
+                    className="ig-upload-remove"
+                    onClick={handleRemoveReference}
+                    disabled={isRunning}
+                    aria-label="Remove reference image"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="18" y1="6" x2="6" y2="18" />
+                      <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                  </button>
+                </div>
+              ) : (
+                <label className="ig-upload-dropzone" htmlFor="ig-reference-upload">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="17 8 12 3 7 8" />
+                    <line x1="12" y1="3" x2="12" y2="15" />
+                  </svg>
+                  <span>Upload a reference image</span>
+                  <span className="ig-upload-formats">PNG, JPEG, or WebP — max 10 MB</span>
+                </label>
+              )}
+              <input
+                ref={fileInputRef}
+                id="ig-reference-upload"
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                onChange={handleFileUpload}
+                disabled={isRunning}
+                className="ig-upload-input"
+              />
+            </div>
           </div>
 
           {/* Preset concepts */}
@@ -568,11 +648,7 @@ const ImageGenDemoScreen: React.FC = () => {
             </div>
 
             <div className="ig-image-container">
-              {isMockImage ? (
-                <img src={summary.finalImageUrl} alt="Mock placeholder" className="ig-image-mock" />
-              ) : (
-                <img src={summary.finalImageUrl} alt="Generated" className="ig-image" />
-              )}
+              <img src={summary.finalImageUrl} alt="Generated" className="ig-image" />
             </div>
 
             <div className="ig-prompt-text">

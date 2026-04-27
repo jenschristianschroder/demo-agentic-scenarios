@@ -16,9 +16,10 @@ import type {
   ImageQuality,
   ImageProgressData,
 } from '../types.js';
-import { getImageClient, getImageDeployment, isImageConfigured } from '../azureClients.js';
-import { engineerPrompt, mockEngineerPrompt } from '../agents/promptEngineerAgent.js';
-import { reviewImage, mockReviewImage } from '../agents/artDirectorAgent.js';
+import { getImageClient, getImageDeployment } from '../azureClients.js';
+import { engineerPrompt } from '../agents/promptEngineerAgent.js';
+import { reviewImage } from '../agents/artDirectorAgent.js';
+import { toFile } from 'openai';
 
 export const imageGenRouter = Router();
 
@@ -26,30 +27,20 @@ const VALID_SIZES: ImageSize[] = ['1024x1024', '1536x1024', '1024x1536', 'auto']
 const VALID_QUALITIES: ImageQuality[] = ['low', 'medium', 'high', 'auto'];
 const MAX_REVISIONS = 3;
 
-// Placeholder image used in mock mode (simple SVG data URL)
-const MOCK_IMAGE_URL =
-  'data:image/svg+xml;base64,' +
-  Buffer.from(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
-  <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#667eea"/>
-      <stop offset="100%" stop-color="#764ba2"/>
-    </linearGradient>
-  </defs>
-  <rect width="512" height="512" fill="url(#g)" rx="24"/>
-  <text x="50%" y="45%" font-family="system-ui,sans-serif" font-size="48" fill="white" text-anchor="middle" dominant-baseline="middle">🎨</text>
-  <text x="50%" y="60%" font-family="system-ui,sans-serif" font-size="20" fill="rgba(255,255,255,0.8)" text-anchor="middle" dominant-baseline="middle">Mock Image</text>
-  <text x="50%" y="70%" font-family="system-ui,sans-serif" font-size="14" fill="rgba(255,255,255,0.6)" text-anchor="middle" dominant-baseline="middle">Configure Azure OpenAI to generate real images</text>
-</svg>`
-  ).toString('base64');
-
 function emit(res: Response, event: ImageGenEvent): void {
   res.write(`data: ${JSON.stringify(event)}\n\n`);
 }
 
 function now(): string {
   return new Date().toISOString();
+}
+
+/**
+ * Convert a base64 data URL or raw base64 string to a Buffer.
+ */
+function base64ToBuffer(base64: string): Buffer {
+  const raw = base64.includes(',') ? base64.split(',')[1] : base64;
+  return Buffer.from(raw, 'base64');
 }
 
 /**
@@ -77,6 +68,7 @@ imageGenRouter.post('/run', (req: Request, res: Response) => {
   const creativityLevel = Math.min(1, Math.max(0, body.creativityLevel ?? 0.7));
   const style = (body.style || 'photorealistic').trim();
   const concept = body.concept.trim();
+  const referenceImageBase64 = body.referenceImageBase64 || undefined;
 
   // ── Set up SSE headers ───────────────────────────────────────────────
   res.writeHead(200, {
@@ -94,6 +86,7 @@ imageGenRouter.post('/run', (req: Request, res: Response) => {
     artDirectorEnabled,
     maxRevisions,
     creativityLevel,
+    referenceImageBase64,
     res
   ).catch((err) => {
     console.error('Image generation error:', err);
@@ -116,10 +109,9 @@ async function runImageGenPipeline(
   artDirectorEnabled: boolean,
   maxRevisions: number,
   creativityLevel: number,
+  referenceImageBase64: string | undefined,
   res: Response
 ): Promise<void> {
-  const useMock = !isImageConfigured();
-
   // ── Step 1: User request ─────────────────────────────────────────────
   emit(res, { type: 'step-start', step: 'user-request', timestamp: now(), data: { concept } });
   emit(res, { type: 'step-complete', step: 'user-request', timestamp: now(), data: { concept } });
@@ -135,12 +127,14 @@ async function runImageGenPipeline(
     // ── Step 2: Prompt Engineer ────────────────────────────────────────
     emit(res, { type: 'step-start', step: 'prompt-engineer', timestamp: now(), data: null });
 
-    let promptOutput: PromptEngineerOutput;
-    if (useMock) {
-      promptOutput = mockEngineerPrompt(concept, style, revisionInstructions, iteration);
-    } else {
-      promptOutput = await engineerPrompt(concept, style, creativityLevel, revisionInstructions, iteration);
-    }
+    const promptOutput: PromptEngineerOutput = await engineerPrompt(
+      concept,
+      style,
+      creativityLevel,
+      revisionInstructions,
+      iteration,
+      !!referenceImageBase64
+    );
 
     emit(res, { type: 'step-complete', step: 'prompt-engineer', timestamp: now(), data: promptOutput });
 
@@ -149,19 +143,41 @@ async function runImageGenPipeline(
     // ── Step 3: Image Generation ───────────────────────────────────────
     emit(res, { type: 'step-start', step: 'image-generation', timestamp: now(), data: null });
 
+    const imageClient = getImageClient();
+    const deployment = getImageDeployment();
+    const genStart = Date.now();
+
     let imageOutput: ImageGenerationOutput;
-    if (useMock) {
+
+    if (referenceImageBase64) {
+      // Use images.edit when a reference image is provided
+      const imageBuffer = base64ToBuffer(referenceImageBase64);
+      const imageFile = await toFile(imageBuffer, 'reference.png', { type: 'image/png' });
+
+      const result = await imageClient.images.edit({
+        model: deployment,
+        image: imageFile,
+        prompt: promptOutput.refinedPrompt,
+        n: 1,
+        size: size === 'auto' ? undefined : size,
+        quality,
+      });
+
+      const generationDurationMs = Date.now() - genStart;
+      const imageData = result.data[0];
+
+      if (!imageData?.b64_json) {
+        throw new Error('gpt-image-2 edit returned no image data');
+      }
+
       imageOutput = {
-        imageUrl: MOCK_IMAGE_URL,
-        revisedPrompt: promptOutput.refinedPrompt + ' [mock — no Azure credentials configured]',
-        generationDurationMs: 0,
+        imageUrl: `data:image/png;base64,${imageData.b64_json}`,
+        revisedPrompt: imageData.revised_prompt || promptOutput.refinedPrompt,
+        generationDurationMs,
         iteration,
       };
     } else {
-      const imageClient = getImageClient();
-      const deployment = getImageDeployment();
-      const genStart = Date.now();
-
+      // Use images.generate for text-only generation (with streaming)
       const stream = await imageClient.images.generate({
         model: deployment,
         prompt: promptOutput.refinedPrompt,
@@ -199,10 +215,8 @@ async function runImageGenPipeline(
         throw new Error('gpt-image-2 returned no image data');
       }
 
-      const imageUrl = `data:image/png;base64,${finalB64}`;
-
       imageOutput = {
-        imageUrl,
+        imageUrl: `data:image/png;base64,${finalB64}`,
         revisedPrompt,
         generationDurationMs,
         iteration,
@@ -219,18 +233,15 @@ async function runImageGenPipeline(
 
     emit(res, { type: 'step-start', step: 'art-director', timestamp: now(), data: null });
 
-    let artOutput: ArtDirectorOutput;
-    if (useMock) {
-      artOutput = mockReviewImage(iteration);
-    } else {
-      artOutput = await reviewImage(
-        concept,
-        style,
-        promptOutput.refinedPrompt,
-        imageOutput.revisedPrompt,
-        iteration
-      );
-    }
+    const artOutput: ArtDirectorOutput = await reviewImage(
+      concept,
+      style,
+      promptOutput.refinedPrompt,
+      imageOutput.revisedPrompt,
+      iteration,
+      lastImageUrl,
+      referenceImageBase64
+    );
 
     emit(res, { type: 'step-complete', step: 'art-director', timestamp: now(), data: artOutput });
 
