@@ -77,7 +77,9 @@ export async function runImageGen(
     }
   }
 
-  // Stream ended without [DONE] signal — detect premature termination
+  // Stream ended without [DONE] signal — detect premature termination.
+  // A well-formed pipeline always sends either a run-complete event, an error
+  // event, or a [DONE] sentinel. If none were received the connection was lost.
   if (!receivedDone && !receivedRunComplete && !receivedError) {
     console.error('[ImageGen:SSE] Stream ended prematurely without completion or error signal');
     onEvent({

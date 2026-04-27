@@ -239,6 +239,7 @@ async function runImageGenPipeline(
       // Try streaming first, fall back to non-streaming if it fails
       let finalB64 = '';
       const revisedPrompt = promptOutput.refinedPrompt;
+      let needsFallback = false;
 
       try {
         console.log('[ImageGen] Starting streaming generation...');
@@ -279,17 +280,17 @@ async function runImageGenPipeline(
 
         if (!finalB64 && !signal.aborted) {
           console.warn('[ImageGen] Streaming completed but no final image received, falling back to non-streaming');
-          throw new Error('streaming_fallback');
+          needsFallback = true;
         }
       } catch (streamErr) {
-        // Fall back to non-streaming generation
         if (signal.aborted) throw new Error('Pipeline aborted');
-
         const errMsg = streamErr instanceof Error ? streamErr.message : String(streamErr);
-        if (errMsg !== 'streaming_fallback') {
-          console.warn('[ImageGen] Streaming generation failed, falling back to non-streaming:', errMsg);
-        }
+        console.warn('[ImageGen] Streaming generation failed, falling back to non-streaming:', errMsg);
+        needsFallback = true;
+      }
 
+      // Fall back to non-streaming generation when streaming didn't produce an image
+      if (needsFallback) {
         console.log('[ImageGen] Using non-streaming generation...');
         const result = await imageClient.images.generate({
           model: deployment,
