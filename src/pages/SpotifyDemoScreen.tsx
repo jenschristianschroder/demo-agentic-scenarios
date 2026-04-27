@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import type { ToolStep, ToolEvent, ToolCallRecord, ToolDefinition, SpotifyRequest, CombinedTimelineItem } from '../types';
 import { runSpotifyAgent } from '../services/spotifyApi';
-import { startSpotifyLogin, getAccessToken, isSpotifyAuthenticated, clearTokens, fetchSpotifyProfile, getMissingScopes, getGrantedScopes } from '../services/spotifyAuth';
+import { startSpotifyLogin, onSpotifyAuthComplete, getAccessToken, isSpotifyAuthenticated, clearTokens, fetchSpotifyProfile, getMissingScopes, getGrantedScopes } from '../services/spotifyAuth';
 import type { SpotifyUserProfile } from '../services/spotifyAuth';
 import ToolPipelineView from './components/ToolPipelineView';
 import ToolInventory from './components/ToolInventory';
@@ -44,6 +44,18 @@ const SpotifyDemoScreen: React.FC = () => {
       });
     }
   }, [authenticated]);
+
+  // Listen for auth completion from the Spotify login popup
+  useEffect(() => {
+    const cleanup = onSpotifyAuthComplete((result) => {
+      if (result.success) {
+        setAuthenticated(true);
+      } else {
+        setError(result.error ?? 'Spotify login failed');
+      }
+    });
+    return cleanup;
+  }, []);
 
   const handleConnect = useCallback(async () => {
     try {

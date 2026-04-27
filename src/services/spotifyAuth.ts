@@ -53,9 +53,16 @@ function getRedirectUri(): string {
 }
 
 /**
- * Start the Spotify login flow — redirects the browser to Spotify's authorize page.
- * Uses the top-level window to avoid Content Security Policy issues when the SPA
- * is embedded in an iframe (Spotify blocks being framed by non-Spotify domains).
+ * Start the Spotify login flow using a popup window.
+ *
+ * Spotify blocks being framed by non-Spotify domains (CSP / X-Frame-Options),
+ * so we cannot load their login page inside this iframe.  Instead of navigating
+ * away (which loses UI state) or opening a new tab (confusing UX), we open a
+ * small popup window.  The popup handles the OAuth redirect and, once the
+ * token exchange is complete, sends a `postMessage` back to this window and
+ * closes itself.
+ *
+ * Call {@link onSpotifyAuthComplete} to register a listener for the result.
  */
 export async function startSpotifyLogin(): Promise<void> {
   const clientId = getClientId();
@@ -65,7 +72,7 @@ export async function startSpotifyLogin(): Promise<void> {
   const state = generateCodeVerifier().slice(0, 16);
 
   // Persist for the callback (use localStorage so it's accessible across
-  // browsing contexts, e.g. when navigating from iframe → top-level window)
+  // browsing contexts, e.g. popup → opener)
   localStorage.setItem('spotify_code_verifier', verifier);
   localStorage.setItem('spotify_auth_state', state);
 
@@ -89,29 +96,37 @@ export async function startSpotifyLogin(): Promise<void> {
 
   const authUrl = `${SPOTIFY_AUTH_URL}?${queryParts.join('&')}`;
 
-  // Navigate the top-level window so Spotify's login page is not loaded inside
-  // an iframe (which Spotify's CSP would block).  The SPA is typically embedded
-  // in a demo-kiosk iframe, so we must break out of it for OAuth redirects.
-  try {
-    if (window.top !== window) {
-      // Same-origin kiosk iframe — navigate the top-level window directly.
-      window.top!.location.href = authUrl;
-      return;
-    }
-  } catch {
-    // Cross-origin iframe — window.top is not accessible.
-    // Open in a new tab so the user can still authenticate.
-    const opened = window.open(authUrl, '_blank');
-    if (!opened) {
-      throw new Error(
-        'Could not open Spotify login — please allow pop-ups for this site, or open the app directly instead of in an iframe.',
-      );
-    }
-    return;
-  }
+  // Open a centered popup window for the Spotify login.
+  const width = 500;
+  const height = 700;
+  const left = window.screenX + (window.outerWidth - width) / 2;
+  const top = window.screenY + (window.outerHeight - height) / 2;
+  const features = `width=${width},height=${height},left=${left},top=${top},popup=yes`;
 
-  // Not in an iframe — normal top-level redirect.
-  window.location.href = authUrl;
+  const popup = window.open(authUrl, 'spotify-auth', features);
+  if (!popup) {
+    throw new Error(
+      'Could not open Spotify login — please allow pop-ups for this site.',
+    );
+  }
+}
+
+/**
+ * Register a listener that fires when Spotify auth completes in the popup.
+ * Returns a cleanup function to remove the listener.
+ */
+export function onSpotifyAuthComplete(
+  callback: (result: { success: boolean; error?: string }) => void,
+): () => void {
+  const handler = (event: MessageEvent) => {
+    // Only accept messages from our own origin
+    if (event.origin !== window.location.origin) return;
+    if (event.data?.type === 'spotify-auth-complete') {
+      callback(event.data as { success: boolean; error?: string });
+    }
+  };
+  window.addEventListener('message', handler);
+  return () => window.removeEventListener('message', handler);
 }
 
 /**
