@@ -26,7 +26,7 @@ export const imageGenRouter = Router();
 const VALID_SIZES: ImageSize[] = ['1024x1024', '1536x1024', '1024x1536', 'auto'];
 const VALID_QUALITIES: ImageQuality[] = ['low', 'medium', 'high', 'auto'];
 const MAX_REVISIONS = 3;
-const IMAGE_GEN_TIMEOUT_MS = 180_000; // 3 minutes
+const IMAGE_GEN_TIMEOUT_MS = 600_000; // 10 minutes — gpt-image-2 can take 60-180s per generation; with prompt engineer, art director, and up to 3 revision iterations the pipeline needs generous headroom
 
 function emit(res: Response, event: ImageGenEvent): void {
   if (res.writableEnded) return;
