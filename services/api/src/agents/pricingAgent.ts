@@ -140,6 +140,7 @@ Using the pricing information above, determine the MSRP and applicable volume di
 
   // ── Execute tool call ──────────────────────────────────────────────────
   const toolCall = toolCalls[0];
+  if (!('function' in toolCall)) throw new Error('Unexpected tool call type');
   const toolArgs = JSON.parse(toolCall.function.arguments);
   const toolResult = executeCalculatePricing(toolArgs);
 

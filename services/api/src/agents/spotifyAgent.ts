@@ -182,21 +182,27 @@ const TOOLS: ChatCompletionTool[] = WEB_SEARCH_AVAILABLE
   : BASE_TOOLS;
 
 /** Tool definitions for the UI (without the JSON Schema details) */
-export const SPOTIFY_TOOL_DEFINITIONS: ToolDefinition[] = TOOLS.map((t) => ({
-  name: t.function.name,
-  description: t.function.description ?? '',
-  parameters: t.function.parameters as Record<string, unknown>,
-}));
+export const SPOTIFY_TOOL_DEFINITIONS: ToolDefinition[] = TOOLS.map((t) => {
+  if (!('function' in t)) throw new Error('Expected function tool');
+  return {
+    name: t.function.name,
+    description: t.function.description ?? '',
+    parameters: t.function.parameters as Record<string, unknown>,
+  };
+});
 
 // ─── Responses API tool format (FunctionTool) ────────────────────────────────
 
-const RESPONSE_TOOLS: FunctionTool[] = TOOLS.map((t) => ({
-  type: 'function',
-  name: t.function.name,
-  description: t.function.description ?? null,
-  parameters: (t.function.parameters as Record<string, unknown>) ?? null,
-  strict: null,
-}));
+const RESPONSE_TOOLS: FunctionTool[] = TOOLS.map((t) => {
+  if (!('function' in t)) throw new Error('Expected function tool');
+  return {
+    type: 'function',
+    name: t.function.name,
+    description: t.function.description ?? null,
+    parameters: (t.function.parameters as Record<string, unknown>) ?? null,
+    strict: null,
+  };
+});
 
 const WEB_SEARCH_RULES = `- When the user asks about a genre, mood, artist, activity, or any music topic, start by calling web_search to gather context (e.g. well-known tracks, key artists, characteristics of the genre). Use this research to craft better Spotify search queries.
 - When web_search returns URLs that look promising (e.g. articles, blog posts, curated lists), use get_page_content to read the full page and extract detailed knowledge such as specific track names, artist recommendations, or playlist ideas.
@@ -490,6 +496,7 @@ async function runSpotifyAgentChat(
 
     // Process each tool call
     for (const tc of assistantMessage.tool_calls) {
+      if (!('function' in tc)) continue;
       callCounter++;
       const toolName = tc.function.name;
       const toolArgs = JSON.parse(tc.function.arguments) as Record<string, unknown>;
