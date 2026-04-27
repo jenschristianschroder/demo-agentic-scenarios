@@ -10,6 +10,9 @@ import './SpotifyDemoScreen.css';
 
 const SpotifyDemoScreen: React.FC = () => {
 
+  // ─── Iframe detection ───────────────────────────────────────────────────
+  const isInIframe = window.self !== window.top;
+
   // ─── Auth state ─────────────────────────────────────────────────────────
   const [authenticated, setAuthenticated] = useState(isSpotifyAuthenticated());
   const [accessToken, setAccessToken] = useState<string | null>(null);
@@ -271,6 +274,22 @@ const SpotifyDemoScreen: React.FC = () => {
             <p className="spotify-auth-gate-desc">
               This demo uses your Spotify account to search tracks, create playlists, and manage your music — all driven by an AI agent.
             </p>
+            {isInIframe && (
+              <div className="spotify-iframe-notice">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="8" x2="12" y2="12" />
+                  <line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>
+                <span>
+                  Spotify authentication does not work inside an iframe.{' '}
+                  <a href={window.location.href} target="_blank" rel="noopener noreferrer">
+                    Open this demo in a new tab
+                  </a>{' '}
+                  to connect your Spotify account.
+                </span>
+              </div>
+            )}
             <button className="spotify-connect-btn spotify-connect-btn-lg" onClick={handleConnect} type="button">
               Connect to Spotify
             </button>
