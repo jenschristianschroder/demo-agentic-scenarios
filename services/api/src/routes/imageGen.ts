@@ -142,7 +142,9 @@ imageGenRouter.post('/run', (req: Request, res: Response) => {
         });
         res.write('data: [DONE]\n\n');
         res.end();
-      } catch { /* response already closed */ }
+      } catch (writeErr) {
+        console.error('[ImageGen] Failed to send error to client:', writeErr);
+      }
     }
   }).finally(() => {
     clearTimeout(timeoutId);
