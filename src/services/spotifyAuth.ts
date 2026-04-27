@@ -121,9 +121,15 @@ export function onSpotifyAuthComplete(
   const handler = (event: MessageEvent) => {
     // Only accept messages from our own origin
     if (event.origin !== window.location.origin) return;
-    if (event.data?.type === 'spotify-auth-complete') {
-      callback(event.data as { success: boolean; error?: string });
-    }
+    if (event.data?.type !== 'spotify-auth-complete') return;
+
+    // Validate the message shape at runtime before passing to the callback
+    const success = event.data.success;
+    if (typeof success !== 'boolean') return;
+    const error = event.data.error;
+    if (error !== undefined && typeof error !== 'string') return;
+
+    callback({ success, error });
   };
   window.addEventListener('message', handler);
   return () => window.removeEventListener('message', handler);

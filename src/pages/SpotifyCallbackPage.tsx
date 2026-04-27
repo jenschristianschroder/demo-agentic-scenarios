@@ -7,10 +7,12 @@ import { exchangeCode, getStoredState } from '../services/spotifyAuth';
  * OAuth flow (i.e. it has an opener that shares the same origin).
  */
 function isPopup(): boolean {
+  if (!window.opener) return false;
   try {
-    return !!window.opener && window.opener.origin === window.location.origin;
+    // Accessing opener.origin throws a SecurityError when the opener is
+    // cross-origin or has already been closed / garbage-collected.
+    return window.opener.origin === window.location.origin;
   } catch {
-    // Cross-origin opener — treat as a non-popup context.
     return false;
   }
 }

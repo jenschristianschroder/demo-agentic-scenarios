@@ -49,6 +49,7 @@ const SpotifyDemoScreen: React.FC = () => {
   useEffect(() => {
     const cleanup = onSpotifyAuthComplete((result) => {
       if (result.success) {
+        setError(null);
         setAuthenticated(true);
       } else {
         setError(result.error ?? 'Spotify login failed');
