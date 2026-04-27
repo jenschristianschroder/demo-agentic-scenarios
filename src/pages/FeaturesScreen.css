@@ -69,3 +69,21 @@
   color: #666666;
   line-height: 1.4;
 }
+
+.feature-card-new-tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  margin-left: auto;
+  border-radius: 6px;
+  color: #666666;
+  transition: color 0.15s, background 0.15s;
+}
+
+.feature-card-new-tab:hover {
+  color: #1DB954;
+  background: #f0f0f0;
+}
