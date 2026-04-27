@@ -249,6 +249,7 @@ async function runImageGenPipeline(
         n: 1,
         size: size === 'auto' ? undefined : size,
         quality,
+        response_format: 'b64_json',
       }, { signal });
 
       const generationDurationMs = Date.now() - genStart;
