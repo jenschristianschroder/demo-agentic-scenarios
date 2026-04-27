@@ -6,6 +6,7 @@ import type {
   ImageGenSummary,
   PromptEngineerOutput,
   ImageGenerationOutput,
+  ImageProgressData,
   ArtDirectorOutput,
   ImageSize,
   ImageQuality,
@@ -20,8 +21,9 @@ const STYLES = ['Photorealistic', 'Illustration', 'Digital Art', 'Oil Painting',
 
 const SIZE_OPTIONS: { label: string; value: ImageSize }[] = [
   { label: 'Square', value: '1024x1024' },
-  { label: 'Landscape', value: '1792x1024' },
-  { label: 'Portrait', value: '1024x1792' },
+  { label: 'Landscape', value: '1536x1024' },
+  { label: 'Portrait', value: '1024x1536' },
+  { label: 'Auto', value: 'auto' },
 ];
 
 const PRESET_CONCEPTS = [
@@ -230,6 +232,7 @@ const ImageGenDemoScreen: React.FC = () => {
   const [imageOutputs, setImageOutputs] = useState<ImageGenerationOutput[]>([]);
   const [artDirectorOutputs, setArtDirectorOutputs] = useState<ArtDirectorOutput[]>([]);
   const [summary, setSummary] = useState<ImageGenSummary | null>(null);
+  const [partialImageUrl, setPartialImageUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const handlePreset = useCallback((idx: number) => {
@@ -247,6 +250,7 @@ const ImageGenDemoScreen: React.FC = () => {
     setImageOutputs([]);
     setArtDirectorOutputs([]);
     setSummary(null);
+    setPartialImageUrl(null);
     setError(null);
 
     const request: ImageGenRequest = {
@@ -263,6 +267,15 @@ const ImageGenDemoScreen: React.FC = () => {
       await runImageGen(request, (event: ImageGenEvent) => {
         if (event.type === 'step-start') {
           setActiveStep(event.step);
+          if (event.step === 'image-generation') {
+            setPartialImageUrl(null);
+          }
+          return;
+        }
+
+        if (event.type === 'image-progress') {
+          const progress = event.data as ImageProgressData;
+          setPartialImageUrl(progress.partialImageUrl);
           return;
         }
 
@@ -507,6 +520,19 @@ const ImageGenDemoScreen: React.FC = () => {
           imageOutputs={imageOutputs}
           artDirectorOutputs={artDirectorOutputs}
         />
+
+        {/* ── Partial Image Preview ───────────────────────────── */}
+        {partialImageUrl && activeStep === 'image-generation' && !summary && (
+          <div className="ig-partial-preview">
+            <div className="ig-partial-preview-header">
+              <span className="ig-partial-preview-title">Generating…</span>
+              <span className="ig-step-spinner" />
+            </div>
+            <div className="ig-image-container">
+              <img src={partialImageUrl} alt="Partial preview" className="ig-image ig-image-partial" />
+            </div>
+          </div>
+        )}
 
         {/* ── Error ─────────────────────────────────────────── */}
         {error && <div className="ig-error">{error}</div>}

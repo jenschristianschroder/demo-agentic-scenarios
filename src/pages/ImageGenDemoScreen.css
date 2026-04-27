@@ -353,6 +353,37 @@
   font-style: italic;
 }
 
+/* ─── Partial Image Preview ────────────────────────────────── */
+
+.ig-partial-preview {
+  margin-top: 18px;
+  padding: 16px;
+  background: #fafafa;
+  border-radius: 10px;
+  border: 1px dashed #c0c0c0;
+}
+
+.ig-partial-preview-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.ig-partial-preview-title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #666666;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.ig-image-partial {
+  opacity: 0.85;
+  filter: contrast(0.95);
+  transition: opacity 0.3s ease;
+}
+
 /* ─── Error ────────────────────────────────────────────────── */
 
 .ig-error {
