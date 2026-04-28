@@ -189,6 +189,22 @@ const StepDetailCards: React.FC<StepDetailsProps> = ({
         </div>
       ))}
 
+      {imageOutputs.map((img) => (
+        <div key={`img-${img.iteration}`} className="ig-detail-card">
+          <div className="ig-detail-card-header">
+            <span className="ig-detail-card-title">
+              Generated Image {imageOutputs.length > 1 ? `— Iteration ${img.iteration}` : ''}
+            </span>
+            <span className="ig-detail-card-badge">
+              {(img.generationDurationMs / 1000).toFixed(1)}s
+            </span>
+          </div>
+          <div className="ig-image-container">
+            <img src={img.imageUrl} alt={`Generated iteration ${img.iteration}`} className="ig-image" />
+          </div>
+        </div>
+      ))}
+
       {artDirectorOutputs.map((ad) => {
         const scorePct = Math.round(ad.score * 100);
         const fillClass =
