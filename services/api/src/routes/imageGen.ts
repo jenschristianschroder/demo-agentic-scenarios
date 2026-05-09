@@ -90,10 +90,16 @@ function extractMimeType(dataUrl: string): { mime: string; ext: string } {
  * Returns the list of available image generation models based on configured deployments.
  */
 imageGenRouter.get('/models', (_req: Request, res: Response) => {
+  const foundryConfigured = isFoundryImageConfigured();
+  const rawEndpoint = process.env.AZURE_AI_FOUNDRY_ENDPOINT;
+  const maskedEndpoint = rawEndpoint ? `${rawEndpoint.slice(0, 12)}…(${rawEndpoint.length} chars)` : undefined;
+  console.log('[ImageGen] GET /models — AZURE_AI_FOUNDRY_ENDPOINT is', maskedEndpoint ? `set (${maskedEndpoint})` : 'NOT set');
+  console.log('[ImageGen] GET /models — isFoundryImageConfigured():', foundryConfigured);
   const models: { id: ImageModel; label: string; available: boolean }[] = [
     { id: 'gpt-image-2', label: 'GPT-Image-2', available: true },
-    { id: 'mai-image-2e', label: 'MAI-Image-2e', available: isFoundryImageConfigured() },
+    { id: 'mai-image-2e', label: 'MAI-Image-2e', available: foundryConfigured },
   ];
+  console.log('[ImageGen] GET /models — responding with:', JSON.stringify(models));
   res.json({ models });
 });
 
