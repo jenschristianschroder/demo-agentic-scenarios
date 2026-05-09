@@ -133,11 +133,22 @@ jobs:
       # ─── Update container apps with new images ──────────────────────
       - name: Update API Container App
         run: |
-          az containerapp update \
-            --name ${{ env.APP_NAME }}-api \
-            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
-            --image ${{ steps.acr.outputs.acrLoginServer }}/${{ env.APP_NAME }}-api:${{ github.sha }} \
+          args=(
+            --name "${{ env.APP_NAME }}-api"
+            --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}"
+            --image "${{ steps.acr.outputs.acrLoginServer }}/${{ env.APP_NAME }}-api:${{ github.sha }}"
             --min-replicas 1
+          )
+          if [ -n "$AI_FOUNDRY_ENDPOINT" ]; then
+            args+=(--set-env-vars
+              "AZURE_AI_FOUNDRY_ENDPOINT=$AI_FOUNDRY_ENDPOINT"
+              "AZURE_AI_FOUNDRY_IMAGE_DEPLOYMENT=${AI_FOUNDRY_IMAGE_DEPLOYMENT:-MAI-Image-2e}"
+            )
+          fi
+          az containerapp update "${args[@]}"
+        env:
+          AI_FOUNDRY_ENDPOINT: ${{ secrets.AZURE_AI_FOUNDRY_ENDPOINT }}
+          AI_FOUNDRY_IMAGE_DEPLOYMENT: ${{ secrets.AZURE_AI_FOUNDRY_IMAGE_DEPLOYMENT }}
 
       - name: Update SPA Container App
         run: |
