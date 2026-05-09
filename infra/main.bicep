@@ -27,6 +27,15 @@ param tavilyApiKey string = ''
 @description('Azure OpenAI reasoning model deployment name (optional — enables GPT-5 / o-series reasoning in the Spotify agent)')
 param openAIReasoningDeployment string = ''
 
+@description('Azure AI Foundry endpoint URL (optional — enables MAI-Image-2e in AI Creative Studio)')
+param aiFoundryEndpoint string = ''
+
+@description('Azure AI Foundry image model deployment name (optional)')
+param aiFoundryImageDeployment string = ''
+
+@description('Azure AI Foundry resource ID for managed identity role assignment (optional — full resource ID of the externally deployed AI Foundry account)')
+param aiFoundryId string = ''
+
 // ─── Derived names ───────────────────────────────────────────────────────────
 
 var acrName = '${replace('${appName}acr', '-', '')}${uniqueString(resourceGroup().id)}'
@@ -81,6 +90,7 @@ module identity 'modules/identity.bicep' = {
     acrId: acr.outputs.id
     openAIId: openai.outputs.id
     searchId: search.outputs.id
+    aiFoundryId: aiFoundryId
   }
 }
 
@@ -100,6 +110,8 @@ module apiApp 'modules/aca-api.bicep' = {
     acrLoginServer: acr.outputs.loginServer
     tavilyApiKey: tavilyApiKey
     openAIReasoningDeployment: openAIReasoningDeployment
+    aiFoundryEndpoint: aiFoundryEndpoint
+    aiFoundryImageDeployment: aiFoundryImageDeployment
   }
 }
 

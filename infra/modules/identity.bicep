@@ -13,6 +13,9 @@ param openAIId string
 @description('Azure AI Search resource ID for role assignment')
 param searchId string
 
+@description('Azure AI Foundry resource ID for role assignment (optional — enables managed identity access to AI Foundry)')
+param aiFoundryId string = ''
+
 resource identity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: name
   location: location
@@ -64,6 +67,22 @@ resource searchRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
 
 resource searchService 'Microsoft.Search/searchServices@2023-11-01' existing = {
   name: last(split(searchId, '/'))
+}
+
+// ─── AI Foundry Cognitive Services User (optional) ───────────────────────────
+
+resource aiFoundry 'Microsoft.CognitiveServices/accounts@2023-05-01' existing = if (!empty(aiFoundryId)) {
+  name: last(split(aiFoundryId, '/'))
+}
+
+resource aiFoundryRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(aiFoundryId)) {
+  name: guid(aiFoundryId, identity.id, 'a97b65f3-24c7-4388-baec-2e87135dc908-foundry')
+  scope: aiFoundry
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'a97b65f3-24c7-4388-baec-2e87135dc908')
+    principalId: identity.properties.principalId
+    principalType: 'ServicePrincipal'
+  }
 }
 
 output id string = identity.id

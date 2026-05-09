@@ -56,6 +56,9 @@ jobs:
             imageTag=${{ github.sha }}
             tavilyApiKey=${{ secrets.TAVILY_API_KEY }}
             openAIReasoningDeployment=${{ secrets.AZURE_OPENAI_REASONING_DEPLOYMENT }}
+            aiFoundryEndpoint=${{ secrets.AZURE_AI_FOUNDRY_ENDPOINT }}
+            aiFoundryImageDeployment=${{ secrets.AZURE_AI_FOUNDRY_IMAGE_DEPLOYMENT }}
+            aiFoundryId=${{ secrets.AZURE_AI_FOUNDRY_ID }}
           failOnStdErr: false
 
       - name: Validate infra deployment failure reason
