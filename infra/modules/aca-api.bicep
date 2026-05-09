@@ -38,6 +38,12 @@ param tavilyApiKey string = ''
 @description('Azure OpenAI reasoning model deployment name (optional)')
 param openAIReasoningDeployment string = ''
 
+@description('Azure AI Foundry endpoint URL (optional — enables MAI-Image-2e)')
+param aiFoundryEndpoint string = ''
+
+@description('Azure AI Foundry image model deployment name (optional)')
+param aiFoundryImageDeployment string = ''
+
 resource apiApp 'Microsoft.App/containerApps@2023-05-01' = {
   name: name
   location: location
@@ -84,6 +90,8 @@ resource apiApp 'Microsoft.App/containerApps@2023-05-01' = {
             { name: 'CORS_ORIGIN', value: '*' }
             ...(empty(openAIReasoningDeployment) ? [] : [{ name: 'AZURE_OPENAI_REASONING_DEPLOYMENT', value: openAIReasoningDeployment }])
             ...(empty(tavilyApiKey) ? [] : [{ name: 'TAVILY_API_KEY', secretRef: 'tavily-api-key' }])
+            ...(empty(aiFoundryEndpoint) ? [] : [{ name: 'AZURE_AI_FOUNDRY_ENDPOINT', value: aiFoundryEndpoint }])
+            ...(empty(aiFoundryImageDeployment) ? [] : [{ name: 'AZURE_AI_FOUNDRY_IMAGE_DEPLOYMENT', value: aiFoundryImageDeployment }])
           ]
         }
       ]
