@@ -286,16 +286,22 @@ const ImageGenDemoScreen: React.FC = () => {
 
   // Fetch available models on mount
   useEffect(() => {
+    console.log('[ImageGen] Fetching available models from /api/image-gen/models …');
     fetch('/api/image-gen/models')
-      .then((res) => res.json())
+      .then((res) => {
+        console.log('[ImageGen] /api/image-gen/models response status:', res.status);
+        return res.json();
+      })
       .then((data: { models: { id: ImageModel; label: string; available: boolean }[] }) => {
+        console.log('[ImageGen] Models response:', JSON.stringify(data, null, 2));
         const available = new Set<ImageModel>(
           data.models.filter((m) => m.available).map((m) => m.id)
         );
+        console.log('[ImageGen] Available models:', [...available]);
         setAvailableModels(available);
       })
-      .catch(() => {
-        // Silently fall back to gpt-image-2 only
+      .catch((err) => {
+        console.error('[ImageGen] Failed to fetch models, falling back to gpt-image-2 only:', err);
       });
   }, []);
 
