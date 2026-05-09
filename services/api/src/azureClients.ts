@@ -9,8 +9,13 @@ const AZURE_OPENAI_DEPLOYMENT = process.env.AZURE_OPENAI_DEPLOYMENT || 'gpt-4o';
 const AZURE_OPENAI_REASONING_DEPLOYMENT = process.env.AZURE_OPENAI_REASONING_DEPLOYMENT;
 const AZURE_OPENAI_MODEL_ROUTER_DEPLOYMENT = process.env.AZURE_OPENAI_MODEL_ROUTER_DEPLOYMENT || 'model-router';
 const AZURE_OPENAI_IMAGE_DEPLOYMENT = process.env.AZURE_OPENAI_IMAGE_DEPLOYMENT || 'gpt-image-2';
-const AZURE_AI_FOUNDRY_ENDPOINT = process.env.AZURE_AI_FOUNDRY_ENDPOINT;
 const AZURE_AI_FOUNDRY_IMAGE_DEPLOYMENT = process.env.AZURE_AI_FOUNDRY_IMAGE_DEPLOYMENT || 'MAI-Image-2e';
+
+// Strip trailing path segments like /openai/v1 that some Azure portal UIs include
+// in the endpoint URL — the AzureOpenAI SDK appends its own /openai/… paths.
+const AZURE_AI_FOUNDRY_ENDPOINT = process.env.AZURE_AI_FOUNDRY_ENDPOINT
+  ? process.env.AZURE_AI_FOUNDRY_ENDPOINT.replace(/\/openai(?:\/.*)?$/, '')
+  : undefined;
 
 if (!AZURE_OPENAI_ENDPOINT) {
   throw new Error('AZURE_OPENAI_ENDPOINT environment variable is required');
