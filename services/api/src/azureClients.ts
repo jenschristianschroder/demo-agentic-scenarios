@@ -2,6 +2,8 @@ import { DefaultAzureCredential, getBearerTokenProvider } from '@azure/identity'
 import { SearchClient } from '@azure/search-documents';
 import { AzureOpenAI } from 'openai';
 
+import type { ImageSize, ImageQuality } from './types.js';
+
 // ─── Azure OpenAI Configuration ──────────────────────────────────────────────
 
 const AZURE_OPENAI_ENDPOINT = process.env.AZURE_OPENAI_ENDPOINT;
@@ -11,11 +13,31 @@ const AZURE_OPENAI_MODEL_ROUTER_DEPLOYMENT = process.env.AZURE_OPENAI_MODEL_ROUT
 const AZURE_OPENAI_IMAGE_DEPLOYMENT = process.env.AZURE_OPENAI_IMAGE_DEPLOYMENT || 'gpt-image-2';
 const AZURE_AI_FOUNDRY_IMAGE_DEPLOYMENT = process.env.AZURE_AI_FOUNDRY_IMAGE_DEPLOYMENT || 'MAI-Image-2e';
 
-// Strip trailing path segments like /openai/v1 that some Azure portal UIs include
-// in the endpoint URL — the AzureOpenAI SDK appends its own /openai/… paths.
+// Normalise the AI Foundry endpoint to a base resource URL.
+// Accepted formats:
+//   https://<resource>.services.ai.azure.com
+//   https://<resource>.services.ai.azure.com/api/projects/<project>
+//   https://<resource>.services.ai.azure.com/openai/v1
+// We strip /openai/… and /api/projects/… suffixes so that we can append
+// model-specific paths such as /mai/v1/images/generations at call time.
 const AZURE_AI_FOUNDRY_ENDPOINT = process.env.AZURE_AI_FOUNDRY_ENDPOINT
-  ? process.env.AZURE_AI_FOUNDRY_ENDPOINT.replace(/\/openai(?:\/.*)?$/, '')
+  ? process.env.AZURE_AI_FOUNDRY_ENDPOINT
+      .replace(/\/openai(?:\/.*)?$/, '')
+      .replace(/\/api\/projects(?:\/.*)?$/, '')
+      .replace(/\/+$/, '')
   : undefined;
+
+// ─── Startup diagnostics ─────────────────────────────────────────────────────
+
+const mask = (val: string | undefined) =>
+  val ? `${val.slice(0, 40)}…(${val.length} chars)` : '<NOT SET>';
+
+console.log('[AzureClients] ── Startup environment check ──');
+console.log('[AzureClients]   AZURE_OPENAI_ENDPOINT:', mask(process.env.AZURE_OPENAI_ENDPOINT));
+console.log('[AzureClients]   AZURE_OPENAI_IMAGE_DEPLOYMENT:', AZURE_OPENAI_IMAGE_DEPLOYMENT);
+console.log('[AzureClients]   AZURE_AI_FOUNDRY_ENDPOINT (raw):', mask(process.env.AZURE_AI_FOUNDRY_ENDPOINT));
+console.log('[AzureClients]   AZURE_AI_FOUNDRY_ENDPOINT (normalised):', mask(AZURE_AI_FOUNDRY_ENDPOINT));
+console.log('[AzureClients]   AZURE_AI_FOUNDRY_IMAGE_DEPLOYMENT:', AZURE_AI_FOUNDRY_IMAGE_DEPLOYMENT);
 
 if (!AZURE_OPENAI_ENDPOINT) {
   throw new Error('AZURE_OPENAI_ENDPOINT environment variable is required');
@@ -132,31 +154,71 @@ export function isImageConfigured(): boolean {
   return !!AZURE_OPENAI_ENDPOINT;
 }
 
-// ─── Singleton MAI-Image-2e client (via Azure AI Foundry) ─────────────────────
+// ─── MAI-Image-2e via Azure AI Foundry (direct REST) ──────────────────────────
+// MAI-Image-2e uses the /mai/v1/images/generations endpoint, NOT /openai/…,
+// so we cannot use the AzureOpenAI SDK (which auto-appends /openai/deployments/…).
+// Instead we issue a direct fetch() with a bearer token from DefaultAzureCredential.
 
-let foundryImageClient: AzureOpenAI | undefined;
+/** Response shape returned by the MAI images/generations REST endpoint. */
+export interface FoundryImageResponse {
+  data: { b64_json?: string; url?: string; revised_prompt?: string }[];
+}
 
 /**
- * Returns the Azure OpenAI client configured for the MAI-Image-2e deployment
- * via Azure AI Foundry. Uses the AZURE_AI_FOUNDRY_ENDPOINT and
- * AZURE_AI_FOUNDRY_IMAGE_DEPLOYMENT environment variables.
- * Returns undefined when no foundry endpoint is configured.
+ * Call the MAI-Image-2e model via the Azure AI Foundry REST endpoint.
+ * URL: POST {AZURE_AI_FOUNDRY_ENDPOINT}/mai/v1/images/generations
  */
-export function getFoundryImageClient(): AzureOpenAI | undefined {
+export async function generateFoundryImage(opts: {
+  prompt: string;
+  n?: number;
+  size?: ImageSize;
+  quality?: ImageQuality;
+  signal?: AbortSignal;
+}): Promise<FoundryImageResponse> {
   if (!AZURE_AI_FOUNDRY_ENDPOINT) {
-    console.warn('[AzureClients] getFoundryImageClient() — AZURE_AI_FOUNDRY_ENDPOINT is not set, returning undefined');
-    return undefined;
+    throw new Error('MAI-Image-2e is not configured — set AZURE_AI_FOUNDRY_ENDPOINT');
   }
-  if (!foundryImageClient) {
-    console.log('[AzureClients] Creating MAI-Image-2e foundry client — endpoint:', AZURE_AI_FOUNDRY_ENDPOINT, '— deployment:', AZURE_AI_FOUNDRY_IMAGE_DEPLOYMENT, '— apiVersion: 2025-04-01-preview');
-    foundryImageClient = new AzureOpenAI({
-      azureADTokenProvider,
-      endpoint: AZURE_AI_FOUNDRY_ENDPOINT,
-      deployment: AZURE_AI_FOUNDRY_IMAGE_DEPLOYMENT,
-      apiVersion: '2025-04-01-preview',
-    });
+
+  const url = `${AZURE_AI_FOUNDRY_ENDPOINT}/mai/v1/images/generations`;
+
+  // Acquire a bearer token using the same credential used elsewhere
+  const token = await credential.getToken(scope);
+  if (!token) {
+    throw new Error('Failed to acquire Azure credential token for MAI-Image-2e');
   }
-  return foundryImageClient;
+
+  const body: Record<string, unknown> = {
+    model: AZURE_AI_FOUNDRY_IMAGE_DEPLOYMENT,
+    prompt: opts.prompt,
+    n: opts.n ?? 1,
+    response_format: 'b64_json',
+  };
+
+  // Only include size/quality when they are concrete values (not 'auto')
+  if (opts.size && opts.size !== 'auto') body.size = opts.size;
+  if (opts.quality && opts.quality !== 'auto') body.quality = opts.quality;
+
+  console.log('[AzureClients] MAI-Image-2e REST call —', url, '— model:', AZURE_AI_FOUNDRY_IMAGE_DEPLOYMENT);
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token.token}`,
+    },
+    body: JSON.stringify(body),
+    signal: opts.signal,
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => '');
+    console.error('[AzureClients] MAI-Image-2e REST error:', response.status, text.slice(0, 500));
+    throw new Error(`MAI-Image-2e generation failed (HTTP ${response.status}): ${text.slice(0, 300)}`);
+  }
+
+  const json = (await response.json()) as FoundryImageResponse;
+  console.log('[AzureClients] MAI-Image-2e REST success — images returned:', json.data?.length ?? 0);
+  return json;
 }
 
 export function getFoundryImageDeployment(): string {

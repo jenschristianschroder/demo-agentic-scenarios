@@ -17,7 +17,7 @@ import type {
   ImageModel,
   ImageProgressData,
 } from '../types.js';
-import { getImageClient, getImageDeployment, getFoundryImageClient, getFoundryImageDeployment, isFoundryImageConfigured } from '../azureClients.js';
+import { getImageClient, getImageDeployment, generateFoundryImage, getFoundryImageDeployment, isFoundryImageConfigured } from '../azureClients.js';
 import { engineerPrompt } from '../agents/promptEngineerAgent.js';
 import { reviewImage } from '../agents/artDirectorAgent.js';
 import { toFile } from 'openai';
@@ -266,53 +266,41 @@ async function runImageGenPipeline(
     // SSE connection would otherwise go idle, causing proxies (Vite dev server,
     // nginx, Azure Container Apps ingress) to drop the connection.
     const stopKeepalive = startKeepalive(res);
-
-    // Select the appropriate client and deployment based on the model
-    let imageClient;
-    let deployment: string;
-    if (model === 'mai-image-2e') {
-      console.log('[ImageGen] Model "mai-image-2e" selected — using Foundry client');
-      const foundryClient = getFoundryImageClient();
-      if (!foundryClient) {
-        throw new Error('MAI-Image-2e is not configured — set AZURE_AI_FOUNDRY_ENDPOINT and AZURE_AI_FOUNDRY_IMAGE_DEPLOYMENT');
-      }
-      imageClient = foundryClient;
-      deployment = getFoundryImageDeployment();
-      console.log(`[ImageGen] Foundry client ready — endpoint: ${process.env.AZURE_AI_FOUNDRY_ENDPOINT}, deployment: ${deployment}`);
-    } else {
-      console.log('[ImageGen] Model "gpt-image-2" selected — using OpenAI client');
-      imageClient = getImageClient();
-      deployment = getImageDeployment();
-      console.log(`[ImageGen] OpenAI client ready — endpoint: ${process.env.AZURE_OPENAI_ENDPOINT}, deployment: ${deployment}`);
-    }
     const genStart = Date.now();
 
     let imageOutput: ImageGenerationOutput;
 
     try {
-    console.log(`[ImageGen] Calling ${model} (iteration ${iteration}, reference: ${!!referenceImageBase64})`);
 
-    if (referenceImageBase64) {
-      // Use images.edit when a reference image is provided
-      const imageBuffer = base64ToBuffer(referenceImageBase64);
-      const { mime, ext } = extractMimeType(referenceImageBase64);
-      const imageFile = await toFile(imageBuffer, `reference.${ext}`, { type: mime });
+    if (model === 'mai-image-2e') {
+      // ─── MAI-Image-2e path — direct REST call to AI Foundry ────────
+      // MAI uses /mai/v1/images/generations, NOT /openai/…, so we bypass
+      // the AzureOpenAI SDK and call the endpoint directly.
+      console.log('[ImageGen] Model "mai-image-2e" selected — using direct REST to AI Foundry');
+      if (!isFoundryImageConfigured()) {
+        throw new Error('MAI-Image-2e is not configured — set AZURE_AI_FOUNDRY_ENDPOINT and AZURE_AI_FOUNDRY_IMAGE_DEPLOYMENT');
+      }
+      console.log(`[ImageGen] Foundry deployment: ${getFoundryImageDeployment()}`);
 
-      const result = await imageClient.images.edit({
-        model: deployment,
-        image: imageFile,
+      if (referenceImageBase64) {
+        throw new Error('MAI-Image-2e does not support reference image editing — please use GPT-Image-2 for image edits');
+      }
+
+      console.log(`[ImageGen] Calling MAI-Image-2e via REST (iteration ${iteration})`);
+      const result = await generateFoundryImage({
         prompt: promptOutput.refinedPrompt,
         n: 1,
-        size: size === 'auto' ? undefined : size,
+        size,
         quality,
-      }, { signal });
+        signal,
+      });
 
       const generationDurationMs = Date.now() - genStart;
-      console.log(`[ImageGen] Edit completed in ${generationDurationMs}ms`);
-      const imageData = result.data?.[0];
+      console.log(`[ImageGen] MAI-Image-2e completed in ${generationDurationMs}ms`);
 
+      const imageData = result.data?.[0];
       if (!imageData?.b64_json) {
-        throw new Error('gpt-image-2 edit returned no image data');
+        throw new Error('MAI-Image-2e returned no image data');
       }
 
       imageOutput = {
@@ -322,93 +310,132 @@ async function runImageGenPipeline(
         iteration,
       };
     } else {
-      // Use images.generate for text-only generation
-      // Try streaming first, fall back to non-streaming if it fails
-      let finalB64 = '';
-      const revisedPrompt = promptOutput.refinedPrompt;
-      let needsFallback = false;
+      // ─── GPT-Image-2 path — AzureOpenAI SDK ───────────────────────
+      console.log('[ImageGen] Model "gpt-image-2" selected — using OpenAI client');
+      const imageClient = getImageClient();
+      const deployment = getImageDeployment();
+      console.log(`[ImageGen] OpenAI client ready — endpoint: ${process.env.AZURE_OPENAI_ENDPOINT}, deployment: ${deployment}`);
+      console.log(`[ImageGen] Calling gpt-image-2 (iteration ${iteration}, reference: ${!!referenceImageBase64})`);
 
-      try {
-        console.log('[ImageGen] Starting streaming generation...');
-        const stream = await imageClient.images.generate({
+      if (referenceImageBase64) {
+        // Use images.edit when a reference image is provided
+        const imageBuffer = base64ToBuffer(referenceImageBase64);
+        const { mime, ext } = extractMimeType(referenceImageBase64);
+        const imageFile = await toFile(imageBuffer, `reference.${ext}`, { type: mime });
+
+        const result = await imageClient.images.edit({
           model: deployment,
+          image: imageFile,
           prompt: promptOutput.refinedPrompt,
           n: 1,
-          size,
+          size: size === 'auto' ? undefined : size,
           quality,
-          stream: true,
-          partial_images: 3,
         }, { signal });
 
-        console.log('[ImageGen] Stream started, awaiting events...');
+        const generationDurationMs = Date.now() - genStart;
+        console.log(`[ImageGen] Edit completed in ${generationDurationMs}ms`);
+        const imageData = result.data?.[0];
 
-        for await (const event of stream) {
-          if (signal.aborted) break;
-          if (event.type === 'image_generation.partial_image') {
-            console.log(`[ImageGen] Partial image ${event.partial_image_index} received`);
-            const progressData: ImageProgressData = {
-              partialImageUrl: `data:image/png;base64,${event.b64_json}`,
-              partialImageIndex: event.partial_image_index,
-              iteration,
-            };
-            emit(res, {
-              type: 'image-progress',
-              step: 'image-generation',
-              timestamp: now(),
-              data: progressData,
-            });
-          } else if (event.type === 'image_generation.completed') {
-            console.log('[ImageGen] Final image received from stream');
-            finalB64 = event.b64_json;
-          } else {
-            console.log(`[ImageGen] Unknown stream event type: ${(event as { type: string }).type}`);
-          }
+        if (!imageData?.b64_json) {
+          throw new Error('gpt-image-2 edit returned no image data');
         }
 
-        if (!finalB64 && !signal.aborted) {
-          console.warn('[ImageGen] Streaming completed but no final image received, falling back to non-streaming');
+        imageOutput = {
+          imageUrl: `data:image/png;base64,${imageData.b64_json}`,
+          revisedPrompt: imageData.revised_prompt || promptOutput.refinedPrompt,
+          generationDurationMs,
+          iteration,
+        };
+      } else {
+        // Use images.generate for text-only generation
+        // Try streaming first, fall back to non-streaming if it fails
+        let finalB64 = '';
+        const revisedPrompt = promptOutput.refinedPrompt;
+        let needsFallback = false;
+
+        try {
+          console.log('[ImageGen] Starting streaming generation...');
+          const stream = await imageClient.images.generate({
+            model: deployment,
+            prompt: promptOutput.refinedPrompt,
+            n: 1,
+            size,
+            quality,
+            stream: true,
+            partial_images: 3,
+          }, { signal });
+
+          console.log('[ImageGen] Stream started, awaiting events...');
+
+          for await (const event of stream) {
+            if (signal.aborted) break;
+            if (event.type === 'image_generation.partial_image') {
+              console.log(`[ImageGen] Partial image ${event.partial_image_index} received`);
+              const progressData: ImageProgressData = {
+                partialImageUrl: `data:image/png;base64,${event.b64_json}`,
+                partialImageIndex: event.partial_image_index,
+                iteration,
+              };
+              emit(res, {
+                type: 'image-progress',
+                step: 'image-generation',
+                timestamp: now(),
+                data: progressData,
+              });
+            } else if (event.type === 'image_generation.completed') {
+              console.log('[ImageGen] Final image received from stream');
+              finalB64 = event.b64_json;
+            } else {
+              console.log(`[ImageGen] Unknown stream event type: ${(event as { type: string }).type}`);
+            }
+          }
+
+          if (!finalB64 && !signal.aborted) {
+            console.warn('[ImageGen] Streaming completed but no final image received, falling back to non-streaming');
+            needsFallback = true;
+          }
+        } catch (streamErr) {
+          if (signal.aborted) throw new Error('Pipeline aborted');
+          const errMsg = streamErr instanceof Error ? streamErr.message : String(streamErr);
+          console.warn('[ImageGen] Streaming generation failed, falling back to non-streaming:', errMsg);
           needsFallback = true;
         }
-      } catch (streamErr) {
-        if (signal.aborted) throw new Error('Pipeline aborted');
-        const errMsg = streamErr instanceof Error ? streamErr.message : String(streamErr);
-        console.warn('[ImageGen] Streaming generation failed, falling back to non-streaming:', errMsg);
-        needsFallback = true;
-      }
 
-      // Fall back to non-streaming generation when streaming didn't produce an image
-      if (needsFallback) {
-        console.log('[ImageGen] Using non-streaming generation...');
-        const result = await imageClient.images.generate({
-          model: deployment,
-          prompt: promptOutput.refinedPrompt,
-          n: 1,
-          size,
-          quality,
-        }, { signal });
+        // Fall back to non-streaming generation when streaming didn't produce an image
+        if (needsFallback) {
+          console.log('[ImageGen] Using non-streaming generation...');
+          const result = await imageClient.images.generate({
+            model: deployment,
+            prompt: promptOutput.refinedPrompt,
+            n: 1,
+            size,
+            quality,
+          }, { signal });
 
-        const imageData = result.data?.[0];
-        if (!imageData?.b64_json) {
+          const imageData = result.data?.[0];
+          if (!imageData?.b64_json) {
+            throw new Error('gpt-image-2 returned no image data');
+          }
+          finalB64 = imageData.b64_json;
+          console.log('[ImageGen] Non-streaming generation completed successfully');
+        }
+
+        const generationDurationMs = Date.now() - genStart;
+        console.log(`[ImageGen] Generation completed in ${generationDurationMs}ms, image data: ${finalB64 ? 'yes' : 'no'}`);
+
+        if (!finalB64) {
           throw new Error('gpt-image-2 returned no image data');
         }
-        finalB64 = imageData.b64_json;
-        console.log('[ImageGen] Non-streaming generation completed successfully');
+
+        imageOutput = {
+          imageUrl: `data:image/png;base64,${finalB64}`,
+          revisedPrompt,
+          generationDurationMs,
+          iteration,
+        };
       }
-
-      const generationDurationMs = Date.now() - genStart;
-      console.log(`[ImageGen] Generation completed in ${generationDurationMs}ms, image data: ${finalB64 ? 'yes' : 'no'}`);
-
-      if (!finalB64) {
-        throw new Error('gpt-image-2 returned no image data');
-      }
-
-      imageOutput = {
-        imageUrl: `data:image/png;base64,${finalB64}`,
-        revisedPrompt,
-        generationDurationMs,
-        iteration,
-      };
     }
+
     } finally {
       stopKeepalive();
     }
