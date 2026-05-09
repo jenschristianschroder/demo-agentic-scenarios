@@ -91,10 +91,27 @@ function extractMimeType(dataUrl: string): { mime: string; ext: string } {
  */
 imageGenRouter.get('/models', (_req: Request, res: Response) => {
   const foundryConfigured = isFoundryImageConfigured();
-  const rawEndpoint = process.env.AZURE_AI_FOUNDRY_ENDPOINT;
-  const maskedEndpoint = rawEndpoint ? `${rawEndpoint.slice(0, 12)}…(${rawEndpoint.length} chars)` : undefined;
-  console.log('[ImageGen] GET /models — AZURE_AI_FOUNDRY_ENDPOINT is', maskedEndpoint ? `set (${maskedEndpoint})` : 'NOT set');
-  console.log('[ImageGen] GET /models — isFoundryImageConfigured():', foundryConfigured);
+
+  // Debug: show all relevant environment variables (masked for security)
+  const openaiEndpoint = process.env.AZURE_OPENAI_ENDPOINT;
+  const openaiImageDeploy = process.env.AZURE_OPENAI_IMAGE_DEPLOYMENT;
+  const foundryEndpoint = process.env.AZURE_AI_FOUNDRY_ENDPOINT;
+  const foundryImageDeploy = process.env.AZURE_AI_FOUNDRY_IMAGE_DEPLOYMENT;
+
+  const mask = (val: string | undefined) =>
+    val ? `${val.slice(0, 20)}…(${val.length} chars)` : '<NOT SET>';
+
+  console.log('[ImageGen] GET /models — Environment check:');
+  console.log('[ImageGen]   AZURE_OPENAI_ENDPOINT:', mask(openaiEndpoint));
+  console.log('[ImageGen]   AZURE_OPENAI_IMAGE_DEPLOYMENT:', openaiImageDeploy ?? '<NOT SET> (default: gpt-image-2)');
+  console.log('[ImageGen]   AZURE_AI_FOUNDRY_ENDPOINT:', mask(foundryEndpoint));
+  console.log('[ImageGen]   AZURE_AI_FOUNDRY_IMAGE_DEPLOYMENT:', foundryImageDeploy ?? '<NOT SET> (default: MAI-Image-2e)');
+  console.log('[ImageGen]   isFoundryImageConfigured():', foundryConfigured);
+
+  // Resolved deployment values from azureClients
+  console.log('[ImageGen]   Resolved gpt-image-2 deployment:', getImageDeployment());
+  console.log('[ImageGen]   Resolved MAI-Image-2e deployment:', getFoundryImageDeployment());
+
   const models: { id: ImageModel; label: string; available: boolean }[] = [
     { id: 'gpt-image-2', label: 'GPT-Image-2', available: true },
     { id: 'mai-image-2e', label: 'MAI-Image-2e', available: foundryConfigured },
@@ -254,15 +271,19 @@ async function runImageGenPipeline(
     let imageClient;
     let deployment: string;
     if (model === 'mai-image-2e') {
+      console.log('[ImageGen] Model "mai-image-2e" selected — using Foundry client');
       const foundryClient = getFoundryImageClient();
       if (!foundryClient) {
         throw new Error('MAI-Image-2e is not configured — set AZURE_AI_FOUNDRY_ENDPOINT and AZURE_AI_FOUNDRY_IMAGE_DEPLOYMENT');
       }
       imageClient = foundryClient;
       deployment = getFoundryImageDeployment();
+      console.log(`[ImageGen] Foundry client ready — endpoint: ${process.env.AZURE_AI_FOUNDRY_ENDPOINT}, deployment: ${deployment}`);
     } else {
+      console.log('[ImageGen] Model "gpt-image-2" selected — using OpenAI client');
       imageClient = getImageClient();
       deployment = getImageDeployment();
+      console.log(`[ImageGen] OpenAI client ready — endpoint: ${process.env.AZURE_OPENAI_ENDPOINT}, deployment: ${deployment}`);
     }
     const genStart = Date.now();
 
