@@ -108,6 +108,7 @@ let imageClient: AzureOpenAI | undefined;
  */
 export function getImageClient(): AzureOpenAI {
   if (!imageClient) {
+    console.log('[AzureClients] Creating gpt-image-2 client — endpoint:', AZURE_OPENAI_ENDPOINT, '— deployment:', AZURE_OPENAI_IMAGE_DEPLOYMENT, '— apiVersion: 2025-04-01-preview');
     imageClient = new AzureOpenAI({
       azureADTokenProvider,
       endpoint: AZURE_OPENAI_ENDPOINT,
@@ -137,8 +138,12 @@ let foundryImageClient: AzureOpenAI | undefined;
  * Returns undefined when no foundry endpoint is configured.
  */
 export function getFoundryImageClient(): AzureOpenAI | undefined {
-  if (!AZURE_AI_FOUNDRY_ENDPOINT) return undefined;
+  if (!AZURE_AI_FOUNDRY_ENDPOINT) {
+    console.warn('[AzureClients] getFoundryImageClient() — AZURE_AI_FOUNDRY_ENDPOINT is not set, returning undefined');
+    return undefined;
+  }
   if (!foundryImageClient) {
+    console.log('[AzureClients] Creating MAI-Image-2e foundry client — endpoint:', AZURE_AI_FOUNDRY_ENDPOINT, '— deployment:', AZURE_AI_FOUNDRY_IMAGE_DEPLOYMENT, '— apiVersion: 2025-04-01-preview');
     foundryImageClient = new AzureOpenAI({
       azureADTokenProvider,
       endpoint: AZURE_AI_FOUNDRY_ENDPOINT,
