@@ -71,7 +71,7 @@ jobs:
           KNOWN_PATTERNS=("MANIFEST_UNKNOWN" "RoleAssignmentExists")
 
           for pattern in "${KNOWN_PATTERNS[@]}"; do
-            if echo "$DEPLOYMENT_ERROR" | jq -e --arg p "$pattern" '.. | objects | .message? | strings | select(contains($p))' >/dev/null; then
+            if echo "$DEPLOYMENT_ERROR" | jq -e --arg p "$pattern" '.. | objects | select((.message? // empty | contains($p)) or (.code? // empty | contains($p)))' >/dev/null; then
               echo "Detected expected $pattern in deployment error payload; continuing workflow."
               exit 0
             fi
@@ -82,7 +82,7 @@ jobs:
 
           FOUND_KNOWN=false
           for pattern in "${KNOWN_PATTERNS[@]}"; do
-            if echo "$DEPLOYMENT_OPERATIONS" | jq -e --arg p "$pattern" '.[]? | .. | objects | .message? | strings | select(contains($p))' >/dev/null; then
+            if echo "$DEPLOYMENT_OPERATIONS" | jq -e --arg p "$pattern" '.[]? | .. | objects | select((.message? // empty | contains($p)) or (.code? // empty | contains($p)))' >/dev/null; then
               echo "Detected expected $pattern in deployment operations; continuing workflow."
               FOUND_KNOWN=true
               break
