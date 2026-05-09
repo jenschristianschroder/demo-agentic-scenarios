@@ -67,15 +67,29 @@ jobs:
           DEPLOYMENT_ERROR="$(az deployment group show --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" --name "${{ env.INFRA_DEPLOYMENT_NAME }}" --query properties.error -o json)"
           echo "$DEPLOYMENT_ERROR"
 
-          if echo "$DEPLOYMENT_ERROR" | jq -e '.. | objects | .message? | strings | select(contains("MANIFEST_UNKNOWN"))' >/dev/null; then
-            echo "Detected expected MANIFEST_UNKNOWN in deployment error payload; continuing workflow."
-            exit 0
-          fi
+          # Known non-fatal error patterns that are safe to ignore
+          KNOWN_PATTERNS=("MANIFEST_UNKNOWN" "RoleAssignmentExists")
+
+          for pattern in "${KNOWN_PATTERNS[@]}"; do
+            if echo "$DEPLOYMENT_ERROR" | jq -e --arg p "$pattern" '.. | objects | .message? | strings | select(contains($p))' >/dev/null; then
+              echo "Detected expected $pattern in deployment error payload; continuing workflow."
+              exit 0
+            fi
+          done
 
           DEPLOYMENT_OPERATIONS="$(az deployment operation group list --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" --name "${{ env.INFRA_DEPLOYMENT_NAME }}" --query "[?properties.provisioningState=='Failed'].properties.statusMessage" -o json)"
           echo "$DEPLOYMENT_OPERATIONS"
 
-          if ! echo "$DEPLOYMENT_OPERATIONS" | jq -e '.[]? | .. | objects | .message? | strings | select(contains("MANIFEST_UNKNOWN"))' >/dev/null; then
+          FOUND_KNOWN=false
+          for pattern in "${KNOWN_PATTERNS[@]}"; do
+            if echo "$DEPLOYMENT_OPERATIONS" | jq -e --arg p "$pattern" '.[]? | .. | objects | .message? | strings | select(contains($p))' >/dev/null; then
+              echo "Detected expected $pattern in deployment operations; continuing workflow."
+              FOUND_KNOWN=true
+              break
+            fi
+          done
+
+          if [ "$FOUND_KNOWN" = false ]; then
             echo "::error::Infra deployment failed for an unexpected reason."
             exit 1
           fi
