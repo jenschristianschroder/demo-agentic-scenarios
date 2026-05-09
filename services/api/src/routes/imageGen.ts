@@ -14,9 +14,10 @@ import type {
   ImageGenSummary,
   ImageSize,
   ImageQuality,
+  ImageModel,
   ImageProgressData,
 } from '../types.js';
-import { getImageClient, getImageDeployment } from '../azureClients.js';
+import { getImageClient, getImageDeployment, getFoundryImageClient, getFoundryImageDeployment, isFoundryImageConfigured } from '../azureClients.js';
 import { engineerPrompt } from '../agents/promptEngineerAgent.js';
 import { reviewImage } from '../agents/artDirectorAgent.js';
 import { toFile } from 'openai';
@@ -25,6 +26,7 @@ export const imageGenRouter = Router();
 
 const VALID_SIZES: ImageSize[] = ['1024x1024', '1536x1024', '1024x1536', 'auto'];
 const VALID_QUALITIES: ImageQuality[] = ['low', 'medium', 'high', 'auto'];
+const VALID_MODELS: ImageModel[] = ['gpt-image-2', 'mai-image-2e'];
 const MAX_REVISIONS = 3;
 const IMAGE_GEN_TIMEOUT_MS = 600_000; // 10 minutes — gpt-image-2 can take 60-180s per generation; with prompt engineer, art director, and up to 3 revision iterations the pipeline needs generous headroom
 const KEEPALIVE_INTERVAL_MS = 15_000; // Send SSE keepalive comment every 15 seconds during long-running steps
@@ -84,6 +86,18 @@ function extractMimeType(dataUrl: string): { mime: string; ext: string } {
 }
 
 /**
+ * GET /api/image-gen/models
+ * Returns the list of available image generation models based on configured deployments.
+ */
+imageGenRouter.get('/models', (_req: Request, res: Response) => {
+  const models: { id: ImageModel; label: string; available: boolean }[] = [
+    { id: 'gpt-image-2', label: 'GPT-Image-2', available: true },
+    { id: 'mai-image-2e', label: 'MAI-Image-2e', available: isFoundryImageConfigured() },
+  ];
+  res.json({ models });
+});
+
+/**
  * POST /api/image-gen/run
  * Accepts an ImageGenRequest and streams SSE ImageGenEvents.
  */
@@ -103,6 +117,7 @@ imageGenRouter.post('/run', (req: Request, res: Response) => {
 
   const size: ImageSize = VALID_SIZES.includes(body.size) ? body.size : '1024x1024';
   const quality: ImageQuality = VALID_QUALITIES.includes(body.quality) ? body.quality : 'auto';
+  const model: ImageModel = VALID_MODELS.includes(body.model) ? body.model : 'gpt-image-2';
   const maxRevisions = Math.min(MAX_REVISIONS, Math.max(1, Math.round(body.maxRevisions ?? 1)));
   const artDirectorEnabled = body.artDirectorEnabled === true;
   const creativityLevel = Math.min(1, Math.max(0, body.creativityLevel ?? 0.7));
@@ -139,6 +154,7 @@ imageGenRouter.post('/run', (req: Request, res: Response) => {
     style,
     size,
     quality,
+    model,
     artDirectorEnabled,
     maxRevisions,
     creativityLevel,
@@ -175,6 +191,7 @@ async function runImageGenPipeline(
   style: string,
   size: ImageSize,
   quality: ImageQuality,
+  model: ImageModel,
   artDirectorEnabled: boolean,
   maxRevisions: number,
   creativityLevel: number,
@@ -222,19 +239,31 @@ async function runImageGenPipeline(
     // ── Step 3: Image Generation ───────────────────────────────────────
     emit(res, { type: 'step-start', step: 'image-generation', timestamp: now(), data: null });
 
-    // Start keepalive heartbeat — gpt-image-2 calls can take 60-180s+ and the
+    // Start keepalive heartbeat — image generation calls can take 60-180s+ and the
     // SSE connection would otherwise go idle, causing proxies (Vite dev server,
     // nginx, Azure Container Apps ingress) to drop the connection.
     const stopKeepalive = startKeepalive(res);
 
-    const imageClient = getImageClient();
-    const deployment = getImageDeployment();
+    // Select the appropriate client and deployment based on the model
+    let imageClient;
+    let deployment: string;
+    if (model === 'mai-image-2e') {
+      const foundryClient = getFoundryImageClient();
+      if (!foundryClient) {
+        throw new Error('MAI-Image-2e is not configured — set AZURE_AI_FOUNDRY_ENDPOINT and AZURE_AI_FOUNDRY_IMAGE_DEPLOYMENT');
+      }
+      imageClient = foundryClient;
+      deployment = getFoundryImageDeployment();
+    } else {
+      imageClient = getImageClient();
+      deployment = getImageDeployment();
+    }
     const genStart = Date.now();
 
     let imageOutput: ImageGenerationOutput;
 
     try {
-    console.log(`[ImageGen] Calling gpt-image-2 (iteration ${iteration}, reference: ${!!referenceImageBase64})`);
+    console.log(`[ImageGen] Calling ${model} (iteration ${iteration}, reference: ${!!referenceImageBase64})`);
 
     if (referenceImageBase64) {
       // Use images.edit when a reference image is provided

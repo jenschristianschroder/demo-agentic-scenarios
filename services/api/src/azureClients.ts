@@ -9,6 +9,8 @@ const AZURE_OPENAI_DEPLOYMENT = process.env.AZURE_OPENAI_DEPLOYMENT || 'gpt-4o';
 const AZURE_OPENAI_REASONING_DEPLOYMENT = process.env.AZURE_OPENAI_REASONING_DEPLOYMENT;
 const AZURE_OPENAI_MODEL_ROUTER_DEPLOYMENT = process.env.AZURE_OPENAI_MODEL_ROUTER_DEPLOYMENT || 'model-router';
 const AZURE_OPENAI_IMAGE_DEPLOYMENT = process.env.AZURE_OPENAI_IMAGE_DEPLOYMENT || 'gpt-image-2';
+const AZURE_AI_FOUNDRY_ENDPOINT = process.env.AZURE_AI_FOUNDRY_ENDPOINT;
+const AZURE_AI_FOUNDRY_IMAGE_DEPLOYMENT = process.env.AZURE_AI_FOUNDRY_IMAGE_DEPLOYMENT || 'MAI-Image-2e';
 
 if (!AZURE_OPENAI_ENDPOINT) {
   throw new Error('AZURE_OPENAI_ENDPOINT environment variable is required');
@@ -122,6 +124,37 @@ export function getImageDeployment(): string {
 
 export function isImageConfigured(): boolean {
   return !!AZURE_OPENAI_ENDPOINT;
+}
+
+// ─── Singleton MAI-Image-2e client (via Azure AI Foundry) ─────────────────────
+
+let foundryImageClient: AzureOpenAI | undefined;
+
+/**
+ * Returns the Azure OpenAI client configured for the MAI-Image-2e deployment
+ * via Azure AI Foundry. Uses the AZURE_AI_FOUNDRY_ENDPOINT and
+ * AZURE_AI_FOUNDRY_IMAGE_DEPLOYMENT environment variables.
+ * Returns undefined when no foundry endpoint is configured.
+ */
+export function getFoundryImageClient(): AzureOpenAI | undefined {
+  if (!AZURE_AI_FOUNDRY_ENDPOINT) return undefined;
+  if (!foundryImageClient) {
+    foundryImageClient = new AzureOpenAI({
+      azureADTokenProvider,
+      endpoint: AZURE_AI_FOUNDRY_ENDPOINT,
+      deployment: AZURE_AI_FOUNDRY_IMAGE_DEPLOYMENT,
+      apiVersion: '2025-04-01-preview',
+    });
+  }
+  return foundryImageClient;
+}
+
+export function getFoundryImageDeployment(): string {
+  return AZURE_AI_FOUNDRY_IMAGE_DEPLOYMENT;
+}
+
+export function isFoundryImageConfigured(): boolean {
+  return !!AZURE_AI_FOUNDRY_ENDPOINT;
 }
 
 // ─── Singleton Search client ─────────────────────────────────────────────────
