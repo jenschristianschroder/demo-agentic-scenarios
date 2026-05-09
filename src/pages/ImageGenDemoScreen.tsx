@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import type {
   ImageGenRequest,
   ImageGenEvent,
@@ -10,6 +10,7 @@ import type {
   ArtDirectorOutput,
   ImageSize,
   ImageQuality,
+  ImageModel,
 } from '../types';
 import { IMAGE_GEN_STEP_LABELS as STEP_LABELS } from '../types';
 import { runImageGen } from '../services/imageGenApi';
@@ -27,6 +28,11 @@ const SIZE_OPTIONS: { label: string; value: ImageSize }[] = [
   { label: 'Landscape', value: '1536x1024' },
   { label: 'Portrait', value: '1024x1536' },
   { label: 'Auto', value: 'auto' },
+];
+
+const MODEL_OPTIONS: { label: string; value: ImageModel }[] = [
+  { label: 'GPT-Image-2', value: 'gpt-image-2' },
+  { label: 'MAI-Image-2e', value: 'mai-image-2e' },
 ];
 
 const PRESET_CONCEPTS = [
@@ -93,12 +99,18 @@ interface PipelineViewProps {
   activeStep: ImageGenStep | null;
   errorStep: ImageGenStep | null;
   artDirectorEnabled: boolean;
+  selectedModel: ImageModel;
 }
 
-const PipelineView: React.FC<PipelineViewProps> = ({ completedSteps, activeStep, errorStep, artDirectorEnabled }) => {
+const PipelineView: React.FC<PipelineViewProps> = ({ completedSteps, activeStep, errorStep, artDirectorEnabled, selectedModel }) => {
   const visibleSteps = artDirectorEnabled
     ? PIPELINE_STEPS
     : PIPELINE_STEPS.filter((s) => s !== 'art-director');
+
+  const stepLabels = {
+    ...STEP_LABELS,
+    'image-generation': selectedModel === 'mai-image-2e' ? 'MAI-Image-2e' : 'GPT-Image-2',
+  };
 
   return (
     <div className="ig-pipeline">
@@ -144,7 +156,7 @@ const PipelineView: React.FC<PipelineViewProps> = ({ completedSteps, activeStep,
                     </span>
                   )}
                 </span>
-                <span className="ig-step-label">{STEP_LABELS[step]}</span>
+                <span className="ig-step-label">{stepLabels[step]}</span>
               </div>
             </React.Fragment>
           );
@@ -249,6 +261,8 @@ const ImageGenDemoScreen: React.FC = () => {
   const [style, setStyle] = useState(STYLES[0]);
   const [size, setSize] = useState<ImageSize>('1024x1024');
   const [quality, setQuality] = useState<ImageQuality>('auto');
+  const [model, setModel] = useState<ImageModel>('gpt-image-2');
+  const [availableModels, setAvailableModels] = useState<Set<ImageModel>>(new Set(['gpt-image-2']));
   const [artDirectorEnabled, setArtDirectorEnabled] = useState(true);
   const [maxRevisions, setMaxRevisions] = useState(2);
   const [creativityLevel, setCreativityLevel] = useState(0.7);
@@ -269,6 +283,21 @@ const ImageGenDemoScreen: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [errorStep, setErrorStep] = useState<ImageGenStep | null>(null);
   const [isRateLimited, setIsRateLimited] = useState(false);
+
+  // Fetch available models on mount
+  useEffect(() => {
+    fetch('/api/image-gen/models')
+      .then((res) => res.json())
+      .then((data: { models: { id: ImageModel; label: string; available: boolean }[] }) => {
+        const available = new Set<ImageModel>(
+          data.models.filter((m) => m.available).map((m) => m.id)
+        );
+        setAvailableModels(available);
+      })
+      .catch(() => {
+        // Silently fall back to gpt-image-2 only
+      });
+  }, []);
 
   const handlePreset = useCallback((idx: number) => {
     setPresetIdx(idx);
@@ -337,6 +366,7 @@ const ImageGenDemoScreen: React.FC = () => {
       style,
       size,
       quality,
+      model,
       artDirectorEnabled,
       maxRevisions,
       creativityLevel,
@@ -409,7 +439,7 @@ const ImageGenDemoScreen: React.FC = () => {
     } finally {
       setIsRunning(false);
     }
-  }, [concept, style, size, quality, artDirectorEnabled, maxRevisions, creativityLevel, isRunning, referenceImage]);
+  }, [concept, style, size, quality, model, artDirectorEnabled, maxRevisions, creativityLevel, isRunning, referenceImage]);
 
   return (
     <div className="ig-screen">
@@ -513,6 +543,27 @@ const ImageGenDemoScreen: React.FC = () => {
                     disabled={isRunning}
                   >
                     {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="ig-controls-row">
+            {/* Model */}
+            <div className="control-group control-group-flex">
+              <label className="control-label">Model</label>
+              <div className="ig-style-buttons">
+                {MODEL_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    className={`mode-btn ${model === opt.value ? 'mode-btn-active' : ''}`}
+                    onClick={() => setModel(opt.value)}
+                    disabled={isRunning || !availableModels.has(opt.value)}
+                    title={!availableModels.has(opt.value) ? `${opt.label} is not configured` : undefined}
+                  >
+                    {opt.label}
                   </button>
                 ))}
               </div>
@@ -654,6 +705,7 @@ const ImageGenDemoScreen: React.FC = () => {
             activeStep={activeStep}
             errorStep={errorStep}
             artDirectorEnabled={artDirectorEnabled}
+            selectedModel={model}
           />
         )}
 
