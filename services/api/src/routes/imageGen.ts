@@ -286,12 +286,31 @@ async function runImageGenPipeline(
         throw new Error('MAI-Image-2e does not support reference image editing — please use GPT-Image-2 for image edits');
       }
 
-      console.log(`[ImageGen] Calling MAI-Image-2e via REST (iteration ${iteration})`);
+      // Parse the ImageSize string into width/height integers for the MAI API.
+      // MAI constraints: both ≥ 768, width × height ≤ 1,048,576.
+      // Sizes that exceed the pixel budget (e.g. 1536×1024 = 1,572,864) are
+      // clamped to the default 1024×1024.
+      const MAX_MAI_PIXELS = 1_048_576;
+      const MIN_MAI_DIM = 768;
+      let maiWidth = 1024;
+      let maiHeight = 1024;
+      if (size && size !== 'auto') {
+        const parts = size.split('x').map(Number);
+        if (parts.length === 2 && parts[0] >= MIN_MAI_DIM && parts[1] >= MIN_MAI_DIM) {
+          if (parts[0] * parts[1] <= MAX_MAI_PIXELS) {
+            maiWidth = parts[0];
+            maiHeight = parts[1];
+          } else {
+            console.warn(`[ImageGen] MAI-Image-2e: size ${size} exceeds pixel limit (${parts[0] * parts[1]} > ${MAX_MAI_PIXELS}), falling back to 1024x1024`);
+          }
+        }
+      }
+
+      console.log(`[ImageGen] Calling MAI-Image-2e via REST (iteration ${iteration}, ${maiWidth}x${maiHeight})`);
       const result = await generateFoundryImage({
         prompt: promptOutput.refinedPrompt,
-        n: 1,
-        size,
-        quality,
+        width: maiWidth,
+        height: maiHeight,
         signal,
       });
 

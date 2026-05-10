@@ -2,8 +2,6 @@ import { DefaultAzureCredential, getBearerTokenProvider } from '@azure/identity'
 import { SearchClient } from '@azure/search-documents';
 import { AzureOpenAI } from 'openai';
 
-import type { ImageSize, ImageQuality } from './types.js';
-
 // ─── Azure OpenAI Configuration ──────────────────────────────────────────────
 
 const AZURE_OPENAI_ENDPOINT = process.env.AZURE_OPENAI_ENDPOINT;
@@ -167,12 +165,20 @@ export interface FoundryImageResponse {
 /**
  * Call the MAI-Image-2e model via the Azure AI Foundry REST endpoint.
  * URL: POST {AZURE_AI_FOUNDRY_ENDPOINT}/mai/v1/images/generations
+ *
+ * Per the official docs the MAI image generation API accepts only:
+ *   model, prompt, width, height
+ * Output is always PNG in b64_json format. The `n`, `size`, `quality`,
+ * and `response_format` parameters are NOT supported.
+ *
+ * Dimension constraints:
+ *   - Both width and height must be ≥ 768
+ *   - width × height must not exceed 1,048,576 (equivalent to 1024×1024)
  */
 export async function generateFoundryImage(opts: {
   prompt: string;
-  n?: number;
-  size?: ImageSize;
-  quality?: ImageQuality;
+  width?: number;
+  height?: number;
   signal?: AbortSignal;
 }): Promise<FoundryImageResponse> {
   if (!AZURE_AI_FOUNDRY_ENDPOINT) {
@@ -187,18 +193,17 @@ export async function generateFoundryImage(opts: {
     throw new Error('Failed to acquire Azure credential token for MAI-Image-2e');
   }
 
+  const width = opts.width ?? 1024;
+  const height = opts.height ?? 1024;
+
   const body: Record<string, unknown> = {
     model: AZURE_AI_FOUNDRY_IMAGE_DEPLOYMENT,
     prompt: opts.prompt,
-    n: opts.n ?? 1,
-    response_format: 'b64_json',
+    width,
+    height,
   };
 
-  // Only include size/quality when they are concrete values (not 'auto')
-  if (opts.size && opts.size !== 'auto') body.size = opts.size;
-  if (opts.quality && opts.quality !== 'auto') body.quality = opts.quality;
-
-  console.log('[AzureClients] MAI-Image-2e REST call —', url, '— model:', AZURE_AI_FOUNDRY_IMAGE_DEPLOYMENT);
+  console.log('[AzureClients] MAI-Image-2e REST call —', url, '— model:', AZURE_AI_FOUNDRY_IMAGE_DEPLOYMENT, '— dimensions:', `${width}x${height}`);
 
   const response = await fetch(url, {
     method: 'POST',
