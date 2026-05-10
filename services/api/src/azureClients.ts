@@ -2,8 +2,6 @@ import { DefaultAzureCredential, getBearerTokenProvider } from '@azure/identity'
 import { SearchClient } from '@azure/search-documents';
 import { AzureOpenAI } from 'openai';
 
-
-
 // ─── Azure OpenAI Configuration ──────────────────────────────────────────────
 
 const AZURE_OPENAI_ENDPOINT = process.env.AZURE_OPENAI_ENDPOINT;
